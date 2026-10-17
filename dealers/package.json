@@ -1,0 +1,15 @@
+{
+  "name": "@carbuy/dealers",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.18" },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test test/*.test.ts",
+    "demo": "node --experimental-strip-types src/demo-server.ts"
+  },
+  "dependencies": { "exceljs": "^4.4.0", "sharp": "^0.35.0" },
+  "overrides": { "uuid": "^11.1.1" },
+  "devDependencies": { "@types/node": "^24.0.0", "typescript": "^5.9.0" }
+}

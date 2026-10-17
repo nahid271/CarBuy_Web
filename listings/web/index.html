@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CarBuy · Sell your car</title><link rel="stylesheet" href="/styles.css"></head>
+<body>
+  <header class="topbar"><a class="brand" href="/">Car<span>Buy</span><small>Bangladesh</small></a><div class="top-actions"><span class="demo-pill">LOCAL DEMO</span><button id="my-listings" class="text-button">My listings</button></div></header>
+  <main class="shell">
+    <section class="intro"><div><p class="eyebrow">Sell on CarBuy</p><h1>List your car with confidence.</h1><p>Keep your draft, add clear photos and papers, then send it for review.</p></div><div class="intro-mark" aria-hidden="true">01<span>/09</span></div></section>
+    <div class="notice">This is a local MVP demo. The seller identity and payment step are simulated. Do not put real personal documents into this demo.</div>
+    <section id="home" class="card home-card"><h2>Your cars</h2><p>Continue a draft or start a new listing.</p><div id="listing-list"></div><button id="new-listing" class="primary">+ New listing</button></section>
+    <section id="editor" hidden><div class="progress-wrap"><div id="progress-text"></div><div class="progress"><div id="progress-bar"></div></div></div><div class="layout"><nav id="steps" aria-label="Listing steps"></nav><div class="card editor-card"><div id="step-content"></div><div class="actions"><button id="back" class="secondary">Back</button><span id="save-state" aria-live="polite">Saved</span><button id="next" class="primary">Continue</button></div></div></div></section>
+  </main>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="/app.js"></script>
+</body></html>
