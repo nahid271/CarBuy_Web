@@ -1,11 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import type { CatalogService } from '../../vehicle-data/src/catalog.ts';
-import type { Actor as ListingActor, ListingData, Listing } from '../../listings/src/types.ts';
-import { ListingService } from '../../listings/src/service.ts';
+import type { Actor as ListingActor, ListingData, Listing, SoldVia } from '../../listings/src/types.ts';
+import { feeCovered, ListingService } from '../../listings/src/service.ts';
+import { soldViaValues } from '../../listings/src/validation.ts';
 import { LocalMediaStore, preparePhoto } from '../../listings/src/media.ts';
 import { balance, DealerCreditBillingPort } from './credits.ts';
 import { parseBulkFile, stockFromPhotoName, validateBulkRows, csvRows, type BulkReport } from './bulk.ts';
-import type { Application, ApplicationInput, CreditPack, DealerActor, DealerConfig, DealerOrg, DealerRole, DealerState, DealerStore, Lead, Member, Notification, NotificationPort, PaymentGateway, Purchase } from './types.ts';
+import type { Application, ApplicationInput, BuyerActor, ContactReveal, CreditPack, DealerActor, DealerConfig, DealerOrg, DealerRole, DealerState, DealerStore, Lead, Member, Notification, NotificationPort, PaymentGateway, Purchase } from './types.ts';
 import { NidVault } from './vault.ts';
 
 const nowIso = (clock:()=>Date) => clock().toISOString();
@@ -123,9 +124,19 @@ export class DealerService {
       return {id:listing.id,makeId:listing.data.makeId,modelId:listing.data.modelId,year:listing.data.manufactureYear,priceBdt:listing.data.priceBdt,
         stockNumber:listing.data.stockNumber,stockStatus:listing.data.stockStatus,expectedArrival:listing.data.expectedArrival,
         coverKey:listing.photos[0]?.webpKey,area:listing.data.area,district:listing.data.district}}));
+    // No phones or WhatsApp here: this feeds anonymous HTML (D11, MSG-04).
     return {id:org.id,slug:org.slug,name:org.name,logoKey:org.logoKey,address:org.address,district:org.district,
       mapUrl:`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(org.address+', '+org.district+', Bangladesh')}`,
-      phones:org.phones,whatsapp:org.whatsapp,hours:org.hours,about:org.about,verified:true,verifiedAt:org.verifiedAt,stock};
+      hours:org.hours,about:org.about,verified:true,verifiedAt:org.verifiedAt,stock};
+  }
+  // A signed-in, phone-verified buyer reveals the showroom number for one car;
+  // the click is recorded as a lead before the number is returned.
+  async revealContact(buyer:BuyerActor,orgId:string,listingId:string,channel:'call'|'whatsapp'):Promise<ContactReveal>{
+    if(buyer?.role!=='buyer'||!buyer.phoneVerified||!buyer.id)throw new Error('Sign in with a phone-verified buyer account to contact the dealer');
+    if(channel!=='call'&&channel!=='whatsapp')throw new Error('Choose Call or WhatsApp');
+    await this.recordLead({id:'contact-reveal',role:'system'},orgId,listingId,buyer.id,channel);
+    const org=getOrg(await this.store.read(),orgId);const phone=channel==='call'?org.phones[0]:org.whatsapp;
+    return {channel,phone,href:channel==='call'?`tel:${phone}`:`https://wa.me/${phone.replace(/\D/g,'')}`};
   }
   async creditBalance(actor:DealerActor,orgId:string):Promise<number>{const state=await this.store.read();member(actor,getOrg(state,orgId));return balance(state.ledger,orgId)}
   packs():CreditPack[]{return copy(this.config.packs)}
@@ -182,7 +193,7 @@ export class DealerService {
     const org=await this.checkedOrg(actor,orgId);
     const current=await this.listings.getOwn(this.listingActor(actor,org),listingId);
     if(current.status==='pending_review')return current;
-    if(await this.creditBalance(actor,orgId)<1)throw new Error('Buy listing credits before submitting stock');
+    if(!feeCovered(current,this.clock())&&await this.creditBalance(actor,orgId)<1)throw new Error('Buy listing credits before submitting stock');
     const listingActor=this.listingActor(actor,org);
     const submitted=await this.listings.beginSubmission(listingActor,listingId);
     if(submitted.listing.status==='pending_review')return submitted.listing;
@@ -223,13 +234,15 @@ export class DealerService {
     const updated=await this.listings.addPhoto(listingActor,listing.id,prepared.photo);
     return {stockNumber,listingId:listing.id,photoCount:updated.photos.length,hints:prepared.photo.hints};
   }
-  async bulkAction(actor:DealerActor,orgId:string,listingIds:string[],action:'sold'|'renew'|'price',value?:number){
+  // value is the new price for 'price' and the sold-via outcome for 'sold'.
+  async bulkAction(actor:DealerActor,orgId:string,listingIds:string[],action:'sold'|'renew'|'price',value?:number|SoldVia){
     const org=await this.checkedOrg(actor,orgId,['owner','manager']);
     if(!Array.isArray(listingIds)||listingIds.length<1||listingIds.length>100||new Set(listingIds).size!==listingIds.length)throw new Error('Select 1–100 unique cars');
+    if(action==='sold'&&!soldViaValues.includes(value as SoldVia))throw new Error("Where did it sell? Choose CarBuy, elsewhere, showroom trade-in or didn't sell");
     const listingActor=this.listingActor(actor,org);const result:Array<{listingId:string;ok:boolean;message:string}>=[];
     for(const id of listingIds){try{
-      if(action==='sold')await this.listings.markSold(listingActor,id,'elsewhere');
-      else if(action==='price')await this.listings.editLive(listingActor,id,{priceBdt:value!});
+      if(action==='sold')await this.listings.markSold(listingActor,id,value as SoldVia);
+      else if(action==='price')await this.listings.editLive(listingActor,id,{priceBdt:value as number});
       else if(action==='renew'){
         if(await this.creditBalance(actor,orgId)<1)throw new Error('No credits available');
         const started=await this.listings.beginRenewal(listingActor,id);const order=started.listing.feeOrders.at(-1)!;
@@ -237,7 +250,7 @@ export class DealerService {
       }else throw new Error('Invalid bulk action');
       result.push({listingId:id,ok:true,message:'Updated'});
     }catch(error){result.push({listingId:id,ok:false,message:error instanceof Error?error.message:String(error)})}}
-    await this.store.transaction(state=>{log(state,actor.id,'dealer_bulk_action',orgId,undefined,`${action}:${result.filter(x=>x.ok).length}/${result.length}`)});
+    await this.store.transaction(state=>{log(state,actor.id,'dealer_bulk_action',orgId,undefined,`${action}${action==='sold'?`=${value}`:''}:${result.filter(x=>x.ok).length}/${result.length}`)});
     await this.maybeLowCredit(orgId);return result;
   }
   async setAutoRenew(actor:DealerActor,orgId:string,enabled:boolean){return this.updateProfile(actor,orgId,{autoRenew:enabled})}

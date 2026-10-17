@@ -1,7 +1,7 @@
 import type { Body, Fuel, Transmission } from '../../vehicle-data/src/types.ts';
 
 export type SellerType = 'private' | 'dealer';
-export type Status = 'draft' | 'pending_payment' | 'pending_review' | 'live' | 'rejected' | 'sold' | 'withdrawn' | 'expired' | 'removed';
+export type Status = 'draft' | 'pending_payment' | 'pending_review' | 'changes_requested' | 'live' | 'rejected' | 'sold' | 'withdrawn' | 'expired' | 'removed';
 export type Condition = 'reconditioned' | 'used';
 export type SoldVia = 'carbuy' | 'elsewhere' | 'showroom_trade_in' | 'didnt_sell';
 export type Actor = { id: string; role: 'seller' | 'moderator' | 'system'; phoneVerified?: boolean; sellerType?: SellerType; dealerOrgId?: string };
@@ -20,7 +20,8 @@ export type Paper = { id: string; type: PaperType; privateKey: string; uploadedA
 export type AuctionSheet = { privateKey: string; displayKey: string; status: 'seller_provided_unverified' | 'verification_ordered' | 'verified'; grade?: string };
 export type Metrics = { impressions: number; views: number; chat: number; call: number; whatsapp: number; saves: number };
 export type PriceChange = { priceBdt: number; at: string; actorId: string };
-export type FeeOrder = { id: string; kind: 'initial' | 'renewal'; amountBdt: number; status: 'pending' | 'paid' | 'refund_pending' | 'refunded'; paymentReference?: string; checkoutUrl?: string; createdAt: string };
+export type FeeOrder = { id: string; kind: 'initial' | 'renewal'; amountBdt: number; status: 'pending' | 'paid' | 'cancelled' | 'refund_pending' | 'refunded';
+  paymentReference?: string; checkoutUrl?: string; createdAt: string; fromStatus?: Status; cancelledAt?: string };
 export type Vehicle = { id: string; chassisNormalized: string; listingIds: string[] };
 export type Listing = {
   id: string; vehicleId?: string; sellerId: string; sellerType: SellerType; status: Status; version: number;

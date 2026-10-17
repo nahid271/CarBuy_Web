@@ -10,17 +10,19 @@ import { MemoryCatalogStore } from '../../vehicle-data/src/store.ts';
 import { MemoryListingStore } from '../../listings/src/store.ts';
 import { ListingService } from '../../listings/src/service.ts';
 import { LocalMediaStore, preparePhoto } from '../../listings/src/media.ts';
-import { csvTemplate, parseBulkFile, validateBulkRows, xlsxTemplate } from '../src/bulk.ts';
+import { bulkData, csvTemplate, parseBulkFile, validateBulkRows, xlsxTemplate } from '../src/bulk.ts';
 import { DealerCreditBillingPort } from '../src/credits.ts';
 import { DealerService } from '../src/service.ts';
+import { renderShowroomPage } from '../src/showroom-page.ts';
 import { MemoryDealerStore } from '../src/store.ts';
 import { NidVault } from '../src/vault.ts';
-import type { DealerActor, DealerConfig, NotificationPort, PaymentGateway } from '../src/types.ts';
+import type { BuyerActor, DealerActor, DealerConfig, NotificationPort, PaymentGateway } from '../src/types.ts';
 
 const owner:DealerActor={id:'owner-1',role:'dealer_user',phoneVerified:true};
 const manager:DealerActor={id:'manager-1',role:'dealer_user',phoneVerified:true};
 const moderator:DealerActor={id:'moderator-1',role:'moderator'};
 const system:DealerActor={id:'system-1',role:'system'};
+const buyer:BuyerActor={id:'buyer-9',role:'buyer',phoneVerified:true};
 const config:DealerConfig={starterCredits:2,foundingStart:'2026-01-01',foundingEnd:'2026-12-31',lowCreditThreshold:1,
   packs:[{id:'five',credits:5,priceBdt:2000,label:'5 credits'}]};
 async function fixture(){
@@ -95,7 +97,7 @@ test('DLR-03/05/06/07/08/11: stock, credits, alerts, leads, stats and auto-renew
   assert.equal((await f.dealers.stock(owner,org.id))[0].status,'live');
   assert.ok((await f.dealers.notificationsFor(owner,org.id)).some(x=>x.kind==='low_credit'));
   assert.equal((await f.dealers.bulkAction(owner,org.id,[id],'price',2900000))[0].ok,true);
-  assert.equal((await f.dealers.bulkAction(owner,org.id,[id],'sold'))[0].ok,true);
+  assert.equal((await f.dealers.bulkAction(owner,org.id,[id],'sold','carbuy'))[0].ok,true);
   assert.equal((await f.dealers.stock(owner,org.id))[0].status,'sold');
 });
 
@@ -128,4 +130,62 @@ test('DLR-05: rejected first-time stock restores its prepaid credit once',async(
   await f.listings.reject({id:moderator.id,role:'moderator'},id,'Correct showroom description');
   assert.equal(await f.dealers.creditBalance(owner,org.id),2);
   assert.equal((await f.store.read()).ledger.filter(x=>x.reason==='refund').length,1);
+});
+
+async function liveListing(f:Awaited<ReturnType<typeof fixture>>,orgId:string){
+  const id=await preparedListing(f,orgId);await f.dealers.publishStock(owner,orgId,id);
+  await f.listings.approve({id:moderator.id,role:'moderator'},id);return id;
+}
+
+test('LST-04/DLR-04: bulk import parses two-decimal lakh prices exactly',async()=>{
+  const f=await fixture();
+  const rows=await parseBulkFile(Buffer.from(csvTemplate().replace('28.5 lakh','19.99 lakh')),'stock.csv');
+  assert.equal(bulkData(rows[0]).priceBdt,1999000);
+  assert.equal(bulkData({...rows[0],priceBdt:'1.15 lakh'}).priceBdt,115000);
+  const report=await validateBulkRows(rows,f.catalog);
+  assert.equal(report.valid,1);assert.equal(report.rows[0].data.priceBdt,1999000);
+});
+
+test('LST-11/DLR-11: bulk mark sold requires and records where each car sold',async()=>{
+  const f=await fixture();const {org}=await verified(f);const id=await liveListing(f,org.id);
+  await assert.rejects(f.dealers.bulkAction(owner,org.id,[id],'sold'),/Where did it sell/);
+  await assert.rejects(f.dealers.bulkAction(owner,org.id,[id],'sold','auction' as never),/Where did it sell/);
+  assert.equal((await f.dealers.stockDetail(owner,org.id,id)).status,'live');
+  assert.equal((await f.dealers.bulkAction(owner,org.id,[id],'sold','showroom_trade_in'))[0].ok,true);
+  const sold=await f.dealers.stockDetail(owner,org.id,id);
+  assert.equal(sold.status,'sold');assert.equal(sold.soldVia,'showroom_trade_in');
+  assert.ok((await f.dealers.auditLog(owner,org.id)).some(x=>x.action==='dealer_bulk_action'&&x.detail==='sold=showroom_trade_in:1/1'));
+});
+
+test('D11/MSG-04/DLR-02: numbers stay out of public data until a verified buyer reveals them as a lead',async()=>{
+  const f=await fixture();const {org}=await verified(f);const id=await liveListing(f,org.id);
+  const profile=await f.dealers.publicProfile(org.slug);
+  const html=renderShowroomPage(profile,await f.catalog.snapshot(),{revealUrl:'/api/buyer/contact'});
+  for(const text of [JSON.stringify(profile),html]){assert.equal(text.includes('1712345678'),false);assert.equal(/tel:|wa\.me/.test(text),false)}
+  assert.ok(html.includes(profile.mapUrl.replaceAll('&','&amp;')));assert.ok(html.includes('10:00–19:00'));assert.ok(html.includes('Verified dealer'));
+  assert.ok(html.includes(`data-listing="${id}"`));
+  await assert.rejects(f.dealers.revealContact({id:'guest',role:'buyer'},org.id,id,'call'),/phone-verified buyer/);
+  await assert.rejects(f.dealers.revealContact(owner as never,org.id,id,'call'),/phone-verified buyer/);
+  await assert.rejects(f.dealers.revealContact(buyer,org.id,id,'sms' as never),/Call or WhatsApp/);
+  assert.equal((await f.dealers.leads(owner,org.id)).length,0);
+  assert.deepEqual(await f.dealers.revealContact(buyer,org.id,id,'call'),{channel:'call',phone:'+8801712345678',href:'tel:+8801712345678'});
+  assert.equal((await f.dealers.revealContact(buyer,org.id,id,'whatsapp')).href,'https://wa.me/8801712345678');
+  const leads=await f.dealers.leads(owner,org.id);
+  assert.equal(leads.length,1);assert.equal(leads[0].buyerId,buyer.id);assert.deepEqual(leads[0].events.map(x=>x.channel),['call','whatsapp']);
+  const stats=await f.dealers.stats(owner,org.id);assert.equal(stats.totals.call,1);assert.equal(stats.totals.whatsapp,1);
+});
+
+test('DLR-05/TNS-04: request changes keeps the spent credit; resubmitting needs no second credit',async()=>{
+  const f=await fixture();const {org}=await verified(f);const id=await preparedListing(f,org.id);
+  await f.dealers.publishStock(owner,org.id,id);
+  assert.equal(await f.dealers.creditBalance(owner,org.id),1);
+  const returned=await f.listings.requestChanges({id:moderator.id,role:'moderator'},id,'Add the after-sales warranty terms');
+  assert.equal(returned.status,'changes_requested');assert.equal(await f.dealers.creditBalance(owner,org.id),1);
+  await f.store.transaction(state=>{state.ledger.push({id:'adjust-1',orgId:org.id,delta:-1,reason:'admin',reference:'test-zero-balance',createdAt:new Date().toISOString()})});
+  await f.dealers.saveStockDraft(owner,org.id,id,{afterSalesNotes:'Six-month engine and gearbox support'});
+  const resubmitted=await f.dealers.publishStock(owner,org.id,id);
+  assert.equal(resubmitted.status,'pending_review');assert.equal(await f.dealers.creditBalance(owner,org.id),0);
+  const ledger=(await f.store.read()).ledger;
+  assert.equal(ledger.filter(x=>x.reason==='listing').length,1);assert.equal(ledger.filter(x=>x.reason==='refund').length,0);
+  assert.equal((await f.listings.approve({id:moderator.id,role:'moderator'},id)).status,'live');
 });

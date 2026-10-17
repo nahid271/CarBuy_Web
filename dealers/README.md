@@ -22,22 +22,23 @@ Open `http://127.0.0.1:4174/`. The server listens only on `127.0.0.1` and create
 | PRD ID | Implemented behaviour | Main files |
 |---|---|---|
 | DLR-01 | Application captures showroom, trade licence, TIN, encrypted owner NID, address, 1–3 phones, logo, hours, optional BARVIDA. Moderator records visit/video review and a note before verification. | `src/service.ts`, `src/vault.ts`, portal Verification |
-| DLR-02 | Public `/dealer/:slug` page and `/api/dealer/:slug` expose verified badge, logo, map link, hours, phone/WhatsApp, about and live stock only. | `src/service.ts`, `src/demo-server.ts` |
+| DLR-02 | Public `/dealer/:slug` page and `/api/dealer/:slug` expose verified badge, logo, map link, hours, about and live stock only. Phone and WhatsApp numbers never appear in the public JSON or HTML (D11, MSG-04): each car's Call/WhatsApp button calls `revealContact`, which requires a signed-in, phone-verified buyer, records the click as a lead and only then returns the number. | `src/service.ts`, `src/showroom-page.ts`, `src/demo-server.ts` |
 | DLR-03 | Shared showroom listing editor supports unique stock number, Ready/Pre-order with required arrival date, after-sales notes and the full 9.3 car fields/photos. | `src/service.ts`, `web/app.js`, `listings/src/validation.ts` |
 | DLR-04 | Download CSV/XLSX templates, validate up to 500 rows with row-level errors, import valid rows as drafts, upload matching photos named `STOCKNUMBER__1.jpg`. | `src/bulk.ts`, `src/service.ts`, portal Bulk tools |
-| DLR-05 | Configured bKash/Nagad/card pack choice, gateway port, idempotent credit ledger, 1 credit per 30-day dealer listing or renewal, optional auto-renew, low-credit alerts. | `src/credits.ts`, `src/service.ts`, portal Credits |
-| DLR-06 | Per-car chat/call/WhatsApp lead events, inbox status, staff assignment, follow-up notes. | `src/service.ts`, portal Lead inbox |
+| DLR-05 | Configured bKash/Nagad/card pack choice, gateway port, idempotent credit ledger, 1 credit per 30-day dealer listing or renewal, optional auto-renew, low-credit alerts. A moderator's “request changes” keeps the spent credit (no refund), and resubmitting the corrected car spends no second credit, even at a zero balance. | `src/credits.ts`, `src/service.ts`, portal Credits |
+| DLR-06 | Per-car chat/call/WhatsApp lead events (including every buyer contact reveal), inbox status, staff assignment, follow-up notes. | `src/service.ts`, portal Lead inbox |
 | DLR-07 | Notification dispatch port for push, opt-in SMS and opt-in email; queued/sent/failed status stored for each alert. | `src/service.ts`, `src/types.ts` |
 | DLR-08 | Per-car and total impressions, views, contacts by channel and saves, with CSV export. | `src/service.ts`, portal Overview |
 | DLR-09 | Moderator concierge stock creation is recorded in an audit log. | `src/service.ts`, portal Bulk tools / Activity log |
 | DLR-10 | Portal is responsive for narrow mobile browsers and uses touch-sized controls and horizontally scrollable tables. | `web/index.html`, `web/styles.css`, `web/app.js` |
-| DLR-11 | Bulk mark sold, renew and price change, with a per-car success/error report and 100-car limit. | `src/service.ts`, portal My stock |
+| DLR-11 | Bulk mark sold, renew and price change, with a per-car success/error report and 100-car limit. Bulk mark sold requires “Where did it sell?” (CarBuy, elsewhere, showroom trade-in, didn't sell) and records it on every car. | `src/service.ts`, portal My stock |
 | DLR-12 | Starter credits grant once on verified dealer creation if the verification date falls within the configured founding window. | `src/service.ts` (`DealerConfig`) |
 
 ## Data and trust boundaries
 
 - Dealer stock is owned by the **showroom organisation**, so approved staff share one inventory. Role checks limit profile/credits/bulk management to owner or manager as appropriate.
 - NID is encrypted with AES-256-GCM. Only a moderator can call the sensitive review method. Local files and key use restrictive permissions. Application APIs omit the encrypted NID field.
+- Showroom numbers are private to the organisation's staff. Public pages get them only through `revealContact` with a signed-in, phone-verified buyer, and each reveal is logged as a lead. Rate limits and bot checks on reveals (MSG-07) still need the 9.1 identity layer.
 - Checkout confirmation is accepted only from a trusted system actor and a gateway verification callback. Pack and listing debit operations are idempotent. Rejected first-time listings return their credit.
 - Photos use the 9.3 pipeline: normalized WebP/AVIF, stripped metadata, duplicate detection and quality hints. Private 9.3 vehicle papers are not served by dealer public pages.
 - CSV output escapes spreadsheet formula prefixes. XLSX imports reject formula cells, enforce the template headers and cap file/row size.
@@ -47,7 +48,7 @@ Open `http://127.0.0.1:4174/`. The server listens only on `127.0.0.1` and create
 
 The local portal is a **functional demo**, not a public deployment. It uses one hardcoded sample user/moderator, simulated bKash/Nagad/card payments, and notification adapters that record dispatch but do not contact providers. Before public launch, connect the 9.1 authentication system (verified phone, sessions, real staff invitations, moderator access), real payment gateway webhooks, push/SMS/email providers, and a PostgreSQL persistence adapter. The PostgreSQL adapter must update listing order/status and credit balance in one transaction with row locks; the local JSON stores only coordinate within one process. Add rate limiting, monitoring, backups, and hosted media before exposing it to buyers.
 
-The demo API's `/api/demo/*` routes are **test controls** and must not be deployed. The example credit prices and founding period in `demoDealerConfig` are product placeholders, not final commercial terms.
+The demo API's `/api/demo/*` routes are **test controls** and must not be deployed. `/api/demo/buyer/contact` stands in for a signed-in, phone-verified buyer (`demo-buyer`) so the showroom page's Call/WhatsApp buttons can be tried locally. The example credit prices and founding period in `demoDealerConfig` are product placeholders, not final commercial terms.
 
 ## Files
 
@@ -56,6 +57,7 @@ The demo API's `/api/demo/*` routes are **test controls** and must not be deploy
 - `src/bulk.ts` — CSV/XLSX import and validation
 - `src/store.ts` — memory and local JSON stores
 - `src/vault.ts` — owner NID encryption
+- `src/showroom-page.ts` — public showroom HTML (no phone numbers)
 - `src/demo-server.ts` — local API and public profile page
 - `web/` — mobile web portal
 - `sql/003_dealers.sql` — PostgreSQL target schema

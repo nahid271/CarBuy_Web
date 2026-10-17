@@ -1,5 +1,7 @@
 export type DealerRole = 'owner' | 'manager' | 'sales';
 export type DealerActor = { id: string; role: 'dealer_user' | 'moderator' | 'system'; phoneVerified?: boolean };
+export type BuyerActor = { id: string; role: 'buyer'; phoneVerified?: boolean };
+export type ContactReveal = { channel: 'call' | 'whatsapp'; phone: string; href: string };
 export type Member = { userId: string; role: DealerRole; name: string; phone: string; email?: string; pushToken?: string;
   pushEnabled: boolean; smsOptIn: boolean; emailOptIn: boolean; active: boolean };
 export type ApplicationInput = {

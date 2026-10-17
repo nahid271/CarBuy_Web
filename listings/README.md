@@ -23,15 +23,15 @@ Open `http://127.0.0.1:4173`. The web flow autosaves each field to `.local/listi
 | LST-01 | Nine-step responsive sell flow, server-side autosave, draft versions for cross-device conflict detection, validation → payment → review. | Real 9.1 sign-in and 9.11 Android client. |
 | LST-02 | Used and reconditioned conditions with registration-year rules. | — |
 | LST-03 | Required/optional fields and catalogue checks; minimum four photos. | — |
-| LST-04 | BDT parser for lakh/crore and Bangla digits; Indian grouping, negotiable flag. | — |
+| LST-04 | BDT parser for lakh/crore and Bangla digits, scaled with decimal strings so two-decimal amounts such as “19.99 lakh” are exact; Indian grouping, negotiable flag. | — |
 | LST-05 | 20 private / 30 dealer photo caps, camera input, browser resize, server WebP/AVIF output, metadata removal, reorder and remove. | Production object storage/CDN. |
 | LST-06 | Private paper uploads, moderator-only read method, papers-checked state. | Private cloud bucket, moderator authentication and signed URLs. |
 | LST-07 | Seller auction image marked `seller_provided_unverified`. | Paid verification order belongs to PRD 9.10. |
 | LST-08 | Bangla/English description input and validation. | — |
-| LST-09 | Pending payment/review/live/sold/withdrawn/expired/rejected lifecycle; private 60-day term, renewal, 7/1-day reminder events, refund on first-publication rejection. | Real gateway and reminder delivery (PRD 9.10/9.12). |
+| LST-09 | Pending payment/review/changes requested/live/sold/withdrawn/expired/rejected lifecycle; private 60-day term, renewal, 7/1-day reminder events, refund on first-publication rejection but not on “request changes”. Sellers can cancel an unpaid checkout (a submission returns to draft, a renewal to expired/withdrawn); `expireAndRemind` cancels checkouts left unpaid for 24 hours. A gateway callback after cancellation is accepted if the car can still take it, otherwise the order goes to `refund_pending`. | Real gateway and reminder delivery (PRD 9.10/9.12). |
 | LST-10 | Live edits, material-edit review, every price change recorded. | — |
 | LST-11 | Sold outcome: CarBuy, elsewhere, showroom trade-in, didn't sell. | — |
-| LST-12 | Three active private cars enforced in service and target SQL trigger. | Dealer account eligibility (PRD 9.4). |
+| LST-12 | Three active private cars enforced in service and target SQL trigger. Cancelled or stale checkouts stop counting toward the limit. | Dealer account eligibility (PRD 9.4). |
 | LST-13 | My listings with status, views, contact counts, saves and days live; trusted engagement hook. | Wire actual 9.7/9.6 events. |
 | LST-14 | WhatsApp, Facebook, Messenger and copy-link URLs. | Public domain and app deep links. |
 | LST-15 | Median/low/high price guidance when five live comparable cars exist. | More stock improves usefulness. |
@@ -42,7 +42,9 @@ The SQL migration is a **target production schema**, not an adapter for the loca
 
 ## Important behaviour
 
-The seller must confirm the grade after decoding; `NZT260` can mean Allion or Premio. `beginSubmission` validates the whole listing before creating a payment order. A trusted gateway callback uses `confirmPayment`; an ordinary client cannot declare its own order paid through the service. The local demo's `demo-pay` button is a simulation only. All new private listings enter moderator review. A material edit of an already-paid listing can be corrected and resubmitted within its existing term without another charge. Initial rejection requests a refund; if the gateway refund fails, the order remains `refund_pending` for retry.
+The seller must confirm the grade after decoding; `NZT260` can mean Allion or Premio. `beginSubmission` validates the whole listing before creating a payment order. A trusted gateway callback uses `confirmPayment`; an ordinary client cannot declare its own order paid through the service. The local demo's `demo-pay` button is a simulation only. All new private listings enter moderator review. The moderator can approve, `requestChanges` or reject. Request changes moves the listing to `changes_requested` with the moderator's note; the seller edits it and `beginSubmission` sends it back to review under the fee already paid, so no refund and no second charge (PAY-08). A material edit of an already-paid listing can be corrected and resubmitted within its existing term without another charge. Initial rejection requests a refund; if the gateway refund fails, the order remains `refund_pending` for retry.
+
+`cancelCheckout` lets the seller abandon an unpaid checkout. The order becomes `cancelled` and the listing returns to the status it had before payment, so it can be edited or withdrawn again and no longer counts toward the private limit. `expireAndRemind` does the same for checkouts still unpaid after `staleCheckoutMs` (24 hours). If the gateway later reports that a cancelled order was paid, `confirmPayment`/`confirmRenewal` accept it only when it is still the latest order, the listing is unchanged since cancellation and the limit and chassis checks pass. Otherwise the order is marked `refund_pending` and refunded, so a late callback can neither activate a listing twice nor lose the payment.
 
 For a real backend, construct `ListingService(store, catalog, billing, clock, privateFeeBdt, translation)`. `BillingPort` must create checkout, verify a payment notification with the payment provider and refund an order. `TranslationPort` is optional; without it the draft helper returns a plain template and translation reports that no provider is configured. The default fee of ৳400 is a **demo configuration**, not a final business price.
 
