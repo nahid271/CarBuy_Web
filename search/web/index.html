@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="__LANG__">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>__TITLE__</title>
+  <meta name="description" content="__DESCRIPTION__">
+  <link rel="canonical" href="__CANONICAL__">
+  <link rel="alternate" hreflang="en" href="__ENGLISH__">
+  <link rel="alternate" hreflang="bn" href="__BENGALI__">
+  <link rel="stylesheet" href="/styles.css">
+  <script type="application/json" id="bootstrap">__BOOTSTRAP__</script>
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a href="/" class="brand" aria-label="CarBuy home">carbuy<span>.</span></a>
+    <nav class="top-nav"><a href="/cars" data-i18n="browse">Browse cars</a><a href="/#how" data-i18n="how">How it works</a></nav>
+    <div class="header-actions"><a id="language" href="/bn" class="lang-switch">বাংলা</a><a class="sell-link" href="/sell">Sell a car <span>↗</span></a></div>
+  </header>
+  <main>
+    <section id="home" class="home-view hidden">
+      <div class="hero"><div class="hero-content"><p class="eyebrow">BANGLADESH'S CAR MARKETPLACE</p><h1 id="hero-title">Find the right car.<br><em>Feel good about it.</em></h1><p id="hero-copy">Explore cars by price, location and the checks that matter to you.</p>
+        <form id="quick-search" class="quick-search" action="/cars" method="get"><label class="search-entry"><span>⌕</span><input name="q" id="quick-q" placeholder="Try Toyota Axio, নোয়া, X-Trail..." autocomplete="off"></label><button type="submit">Search cars <span>→</span></button></form>
+        <div class="hero-promises"><span>✓ Real listing status</span><span>✓ Clear trust checks</span><span>✓ Prices in lakh</span></div>
+      </div><div class="hero-art" aria-hidden="true"><div class="hero-ring"></div><div class="hero-car"><div class="car-roof"></div><div class="car-body"></div><div class="wheel left"></div><div class="wheel right"></div></div><span class="hero-float">DRIVE WHAT MOVES YOU</span></div></div>
+      <section class="section" id="explore"><div class="section-head"><div><p class="eyebrow">EXPLORE YOUR WAY</p><h2>Start with what matters</h2></div><a href="/cars" class="text-link">View all cars →</a></div><div class="explore-grid"><div class="explore-panel"><h3>Popular models</h3><div id="popular-models" class="pill-list"></div></div><div class="explore-panel"><h3>Shop by budget</h3><div id="budget-links" class="budget-list"></div></div><div class="explore-panel"><h3>Body style</h3><div id="body-links" class="pill-list"></div></div></div></section>
+      <section class="section" id="fresh"><div class="section-head"><div><p class="eyebrow">JUST ADDED</p><h2>Fresh on CarBuy</h2></div><a href="/cars?sort=newest" class="text-link">See all new listings →</a></div><div id="home-cards" class="card-grid">__SSR_CARDS__</div></section>
+      <section class="section hidden" id="recent-section"><div class="section-head"><div><p class="eyebrow">PICK UP WHERE YOU LEFT OFF</p><h2>Recently viewed</h2></div></div><div id="recent-cards" class="card-grid"></div></section>
+      <section class="trust-strip" id="how"><div><span>01</span><h3>Search with confidence</h3><p>Filter by verified information and the specifications you need.</p></div><div><span>02</span><h3>Compare real options</h3><p>See clear prices in lakh, local areas and seller types.</p></div><div><span>03</span><h3>Choose your next drive</h3><p>Save cars and come back to your shortlist.</p></div></section>
+    </section>
+    <section id="search" class="search-view hidden"><div class="search-hero"><p class="eyebrow">FIND YOUR NEXT CAR</p><h1 id="search-title">Cars for sale</h1><p id="result-summary">Explore the marketplace</p><form id="top-search" action="/cars" method="get"><input name="q" id="top-q" placeholder="Search by make, model, location or keyword"><button type="submit">Search →</button></form></div>
+      <div class="search-shell"><aside id="filters" class="filter-panel"><div class="filter-heading"><div><p class="eyebrow">REFINE YOUR SEARCH</p><h2>Filters</h2></div><button type="button" id="clear-filters" class="clear-button">Clear all</button></div>
+        <form id="filters-form" method="get"><div class="filter-group"><h3>Vehicle</h3><label>Condition<select name="condition" id="condition"><option value="">Any condition</option></select></label><label>Make<select name="make" id="make"><option value="">Any make</option></select></label><label>Models <small>Select more than one</small><select name="model" id="model" multiple size="5"></select></label><label>Grade<select name="grade" id="grade"><option value="">Any grade</option></select></label></div>
+          <div class="filter-group"><h3>Price & age</h3><div class="field-pair"><label>Min price <small>৳ lakh</small><input type="number" name="priceMin" min="0" step="0.1" placeholder="Min"></label><label>Max price <small>৳ lakh</small><input type="number" name="priceMax" min="0" step="0.1" placeholder="Max"></label></div><div class="field-pair"><label>Year from<input type="number" name="yearMin" min="1950" placeholder="From"></label><label>Year to<input type="number" name="yearMax" min="1950" placeholder="To"></label></div><div class="field-pair"><label>Registered from<input type="number" name="regMin" min="1950" placeholder="From"></label><label>Registered to<input type="number" name="regMax" min="1950" placeholder="To"></label></div></div>
+          <div class="filter-group"><h3>Specification</h3><div class="field-pair"><label>Mileage from <small>km</small><input type="number" name="mileageMin" min="0" placeholder="Min"></label><label>Mileage to <small>km</small><input type="number" name="mileageMax" min="0" placeholder="Max"></label></div><div class="field-pair"><label>Engine from <small>cc</small><input type="number" name="ccMin" min="1" placeholder="Min"></label><label>Engine to <small>cc</small><input type="number" name="ccMax" min="1" placeholder="Max"></label></div><label>Fuel<select name="fuel" id="fuel"><option value="">Any fuel</option></select></label><label>Body style<select name="body" id="body"><option value="">Any body</option></select></label><label>Transmission<select name="transmission" id="transmission"><option value="">Any transmission</option></select></label><label>Colour<select name="colour" id="colour"><option value="">Any colour</option></select></label></div>
+          <div class="filter-group"><h3>Seller & location</h3><label>Seller<select name="seller" id="seller"><option value="">Any seller</option></select></label><label>Division<select name="division" id="division"><option value="">Anywhere</option></select></label><label>District<select name="district" id="district"><option value="">Any district</option></select></label><label>Area<select name="area" id="area"><option value="">Any area</option></select></label></div>
+          <div class="filter-group"><h3>Trust checks</h3><label class="check"><input type="checkbox" name="auctionVerified" value="1"> Auction sheet verified <span id="auction-count"></span></label><label class="check"><input type="checkbox" name="papersChecked" value="1"> Papers checked <span id="papers-count"></span></label><label class="check"><input type="checkbox" name="verifiedDealer" value="1"> Verified dealer <span id="dealer-count"></span></label><label>Minimum auction grade<input type="number" name="minAuctionGrade" min="0" max="6" step="0.5" placeholder="e.g. 4"></label></div><button class="apply-button" type="submit">Show cars →</button></form>
+      </aside><div class="results-column"><div class="results-toolbar"><span id="result-count"></span><label>Sort by <select id="sort"><option value="best_match">Best match</option><option value="newest">Newest</option><option value="price_asc">Price: low to high</option><option value="price_desc">Price: high to low</option><option value="mileage_asc">Lowest mileage</option><option value="year_desc">Newest model year</option></select></label></div><div id="active-filters" class="active-filters"></div><div id="few-results" class="few-results hidden"><strong>Only a few cars match.</strong><span id="few-suggestions"></span><button type="button" id="save-few">Save search locally</button></div><div id="results" class="card-grid">__SSR_CARDS__</div><div id="empty-state" class="empty-state hidden"><div class="empty-icon">⌕</div><h2>No cars match yet</h2><p>Try a broader search or save these filters to revisit later.</p><ul id="suggestions"></ul><button type="button" id="save-alert" class="outline-button">Save search locally</button><small>Saved searches in this demo do not send alerts.</small></div><div id="pagination" class="pagination"></div><div id="load-sentinel"></div></div></div>
+    </section>
+  </main>
+  <footer><div><a href="/" class="brand">carbuy<span>.</span></a><p>Search smarter. Drive better.</p></div><p>CarBuy Bangladesh · MVP 9.5 search discovery</p></footer>
+</body>
+</html>
