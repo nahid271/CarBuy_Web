@@ -30,18 +30,22 @@ export async function seedDemo(now=new Date()):Promise<void>{
       transmission:generation.specs.transmission,condition:i%4===0?'used':'reconditioned',
       priceBdt:(13+(i*7)%52)*100000+((i%3)*50000),district:districts[location],area:areas[location],
       colour:colours[i%colours.length],description:'Well maintained vehicle with service records available for inspection.',
+      negotiable:i%2===0,taxTokenExpiry:'2027-04-30',fitnessExpiry:'2027-06-30',owners:1+i%3,
       featureIds:['reverse_camera','airbags'],chassisNumber:`DEMO-PRIVATE-${i+1}`,registrationNumber:`DEMO-${i+1}`};
     const publishedAt=new Date(now.getTime()-(i+1)*5*3600_000).toISOString();
     cars.push({id:`demo-car-${String(i+1).padStart(3,'0')}`,sellerId:isDealer?'demo-dealer':'demo-private',sellerType:isDealer?'dealer':'private',
-      status:'live',version:1,data,photos:[{id:`photo-${i}`,position:0,webpKey:`demo-${modelId}-${i%6}.svg`,avifKey:`demo-${modelId}-${i%6}.svg`,
-        sha256:'demo',width:1200,height:800,hints:[]}],papers:[],
-      auctionSheet:i%4===0?{privateKey:'private-demo',displayKey:'demo-sheet',status:'verified',grade:i%8===0?'4.5':'4'}:undefined,
-      papersChecked:i%5===0,metrics:{impressions:0,views:0,chat:0,call:0,whatsapp:0,saves:0},priceHistory:[],feeOrders:[],
+      status:'live',version:1,data,photos:Array.from({length:4},(_,j)=>({id:`photo-${i}-${j}`,position:j,
+        webpKey:`demo-${modelId}-${(i+j)%6}.svg`,avifKey:`demo-${modelId}-${(i+j)%6}.svg`,sha256:`demo-${i}-${j}`,width:1200,height:800,hints:[]})),papers:[],
+      auctionSheet:i%4===0?{privateKey:'private-demo',displayKey:'demo-sheet',status:'verified',grade:i%8===0?'4.5':'4',mileageKm:i%8===0?20000+(i*7613)%90000:15000+(i*7613)%90000}:
+        i%7===0?{privateKey:'private-demo',displayKey:'demo-sheet',status:'seller_provided_unverified'}:undefined,
+      papersChecked:i%5===0,metrics:{impressions:0,views:0,chat:0,call:0,whatsapp:0,saves:0},priceHistory:[
+        {priceBdt:data.priceBdt!+100000,at:new Date(now.getTime()-(i+5)*86_400_000).toISOString(),actorId:'demo-seller'},
+        {priceBdt:data.priceBdt!,at:publishedAt,actorId:'demo-seller'}],feeOrders:[],
       createdAt:publishedAt,updatedAt:publishedAt,publishedAt,expiresAt:new Date(now.getTime()+31*86_400_000).toISOString(),reminderDaysSent:[]});
   }
   await demoListings.transaction(state=>{state.listings=cars});
   await demoDealers.transaction(state=>{state.orgs=[{id:'demo-dealer',slug:'city-motors-demo',name:'City Motors Demo',address:'Dhaka',district:'Dhaka',
-    phones:[],whatsapp:'',logoKey:'',hours:'',about:'Demo showroom',verifiedAt:now.toISOString(),verificationMethod:'visit',members:[],
+    phones:['+8801700000001'],whatsapp:'+8801700000001',logoKey:'demo-dealer-logo.svg',hours:'Sat–Thu · 10:00–19:00',about:'Demo showroom',verifiedAt:now.toISOString(),verificationMethod:'visit',members:[],
     autoRenew:false,createdAt:now.toISOString()}]});
   demoPromotions.push(
     {listingId:'demo-car-001',kind:'top',status:'paid',paymentReference:'DEMO-PAID-1',startsAt:new Date(now.getTime()-1000).toISOString(),endsAt:new Date(now.getTime()+7*86_400_000).toISOString()},

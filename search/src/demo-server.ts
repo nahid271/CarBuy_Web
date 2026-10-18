@@ -14,6 +14,9 @@ import { parseSearchQuery, resolveRoute } from './query.ts';
 import { decodeCursor, SearchService } from './service.ts';
 import { JsonPromotionPort } from './promotions.ts';
 import type { SearchCard, SearchQuery, SearchResult } from './types.ts';
+import { VehicleDetailService } from '../../vehicle-detail/src/service.ts';
+import { VehicleDetailHttp } from '../../vehicle-detail/src/http.ts';
+import { MemoryActivityStore, JsonActivityStore } from '../../vehicle-detail/src/store.ts';
 
 const root=join(dirname(fileURLToPath(import.meta.url)),'..');
 const port=Number(process.env.PORT??4175);
@@ -25,6 +28,15 @@ const dealers=process.env.CARBUY_DEALERS_FILE?new JsonDealerStore(process.env.CA
 const media=real?new LocalMediaStore(process.env.CARBUY_MEDIA_DIR??join(root,'..','listings','.local','media')):null;
 const promotions=process.env.CARBUY_PROMOTIONS_FILE?new JsonPromotionPort(process.env.CARBUY_PROMOTIONS_FILE):{async active(){return real?[]:demoPromotions}};
 const service=new SearchService({listings,catalog,dealers,promotions});
+const activity=real?new JsonActivityStore(join(root,'..','vehicle-detail','.local','activity.json')):new MemoryActivityStore();
+const detailService=new VehicleDetailService({listings,catalog,search:service,dealers,activity,
+  profiles:{async privateSeller(id){return !real&&id==='demo-private'?{id,name:'Rahim Ahmed',memberSince:'2023-03-01T00:00:00Z',
+    phoneVerified:true,responseHours:3,phone:'+8801700000002',whatsapp:'+8801700000002'}:undefined}},
+  translation:real?undefined:{async translate(text,to){if(text==='Well maintained vehicle with service records available for inspection.')
+    return to==='bn'?'ভালোভাবে রক্ষণাবেক্ষণ করা গাড়ি। সার্ভিস রেকর্ড পরিদর্শনের জন্য পাওয়া যাবে।':'Well maintained vehicle with service records available for inspection.';return undefined}},
+  billing:real?undefined:{async createCheckout(order){return {url:`/car/${order.listingId}?demoOrder=${order.id}`,reference:`DEMO-${order.id}`}},
+    async verify(order,proof){return proof===`demo:${order.id}`}},trackMetrics:!real});
+const detailHttp=new VehicleDetailHttp(detailService,activity,!real,(process.env.PUBLIC_BASE_URL??`http://127.0.0.1:${port}`).replace(/\/$/,''));
 const escape=(x:unknown)=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 const json=(res:ServerResponse,status:number,value:unknown)=>{res.writeHead(status,{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'});res.end(JSON.stringify(value))};
 const localeText=(locale:'en'|'bn',en:string,bn:string)=>locale==='bn'?bn:en;
@@ -33,7 +45,7 @@ function cardHtml(card:SearchCard,locale:'en'|'bn'){
     card.papersChecked?localeText(locale,'Papers checked','কাগজপত্র যাচাই'):null,
     card.verifiedDealer?localeText(locale,'Verified dealer','যাচাইকৃত ডিলার'):null].filter(Boolean);
   const placement=card.placement?`<span class="paid-label">${escape(card.placement==='top'?'Top · Paid':'Featured · Paid')}</span>`:'';
-  return `<article class="car-card"><a href="/preview/${encodeURIComponent(card.id)}" class="card-photo" aria-label="${escape(card.title)}">${card.coverKey?`<img src="/media/public/${encodeURIComponent(card.coverKey)}" alt="${escape(card.title)}" loading="lazy">`:''}${placement}</a><div class="card-info"><div class="card-topline"><span>${escape(card.condition)} · ${escape(card.year)}</span><span>${escape(card.area)}, ${escape(card.district)}</span></div><h3><a href="/preview/${encodeURIComponent(card.id)}">${escape(card.title)}</a></h3><div class="price">৳ ${escape(card.priceLakh.toLocaleString('en-BD'))} <small>${localeText(locale,'lakh','লাখ')}</small></div><div class="specs"><span>${escape(card.mileageKm.toLocaleString('en-BD'))} km</span><span>${escape(card.engineCc)} cc</span><span>${escape(card.fuel)}</span></div><div class="card-footer"><div class="badges">${badges.map(x=>`<span class="trust-badge">${escape(x)}</span>`).join('')}</div><button type="button" class="save-btn" data-save="${escape(card.id)}" aria-label="Save car">♡</button></div></div></article>`;
+  return `<article class="car-card"><a href="${locale==='bn'?'/bn':''}/car/${encodeURIComponent(card.id)}" class="card-photo" aria-label="${escape(card.title)}">${card.coverKey?`<img src="/media/public/${encodeURIComponent(card.coverKey)}" alt="${escape(card.title)}" loading="lazy">`:''}${placement}</a><div class="card-info"><div class="card-topline"><span>${escape(card.condition)} · ${escape(card.year)}</span><span>${escape(card.area)}, ${escape(card.district)}</span></div><h3><a href="${locale==='bn'?'/bn':''}/car/${encodeURIComponent(card.id)}">${escape(card.title)}</a></h3><div class="price">৳ ${escape(card.priceLakh.toLocaleString('en-BD'))} <small>${localeText(locale,'lakh','লাখ')}</small></div><div class="specs"><span>${escape(card.mileageKm.toLocaleString('en-BD'))} km</span><span>${escape(card.engineCc)} cc</span><span>${escape(card.fuel)}</span></div><div class="card-footer"><div class="badges">${badges.map(x=>`<span class="trust-badge">${escape(x)}</span>`).join('')}</div><button type="button" class="save-btn" data-save="${escape(card.id)}" aria-label="Save car">♡</button></div></div></article>`;
 }
 async function page(res:ServerResponse,path:string,search:string){
   const snapshot=await catalog.snapshot();const route=resolveRoute(path,snapshot);
@@ -65,6 +77,7 @@ function demoSvg(key:string){
 createServer(async(req,res)=>{
   try{
     const url=new URL(req.url??'/',`http://127.0.0.1:${port}`),path=url.pathname;
+    if(await detailHttp.handle(req,res,url))return;
     if(req.method!=='GET'){json(res,405,{error:'Method not allowed'});return}
     if(path==='/sell'){
       const body='<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sell a car | CarBuy</title><link rel="stylesheet" href="/styles.css"><body><header class="site-header"><a class="brand" href="/">carbuy<span>.</span></a><a class="top-link" href="/">← Back to search</a></header><main class="seller-handoff"><p class="eyebrow">SELL ON CARBUY</p><h1>Create your listing</h1><p>The private seller listing flow is provided by the 9.3 Listings module. Start its local demo with <code>cd listings && npm run demo</code>, then open the seller studio.</p><a class="primary-button" href="http://127.0.0.1:4173/">Open seller studio ↗</a></main></body></html>';
@@ -83,11 +96,11 @@ createServer(async(req,res)=>{
       json(res,200,result);return;
     }
     const preview=/^\/preview\/([a-zA-Z0-9-]{1,80})$/.exec(path);
-    if(preview){const locale=url.searchParams.get('lang')==='bn'?'bn':'en';const card=real?(await service.cardsByIds([preview[1]],locale))[0]:await service.viewCard({role:'system'},preview[1],locale);
-      if(!card){res.writeHead(404);res.end('Live car not found');return}
-      const body=`<!doctype html><html lang="${locale}"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escape(card.title)} | CarBuy</title><link rel="stylesheet" href="/styles.css"><body><header class="site-header"><a class="brand" href="/">carbuy<span>.</span></a><a href="/cars" class="top-link">← Back to search</a></header><main class="preview"><div class="preview-visual">${card.coverKey?`<img src="/media/public/${encodeURIComponent(card.coverKey)}" alt="${escape(card.title)}">`:''}</div><div><p class="eyebrow">CARBUY · PUBLIC PREVIEW</p><h1>${escape(card.title)}</h1><p class="preview-price">৳ ${escape(card.priceLakh)} lakh</p><p>${escape(card.area)}, ${escape(card.district)} · ${escape(card.condition)}</p><div class="preview-specs"><span>${escape(card.mileageKm.toLocaleString('en-BD'))} km</span><span>${escape(card.engineCc)} cc</span><span>${escape(card.fuel)}</span><span>${escape(card.transmission)}</span></div><p class="muted">Full vehicle detail and contacting sellers are part of the next MVP section.</p><a class="primary-button" href="/cars">Explore more cars</a></div></main><script src="/preview.js" defer></script></body></html>`;
-      res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-store','content-security-policy':"default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; base-uri 'self'"});res.end(body);return;}
+    if(preview){const prefix=url.searchParams.get('lang')==='bn'?'/bn':'';
+      res.writeHead(302,{location:`${prefix}/car/${encodeURIComponent(preview[1])}`,'cache-control':'no-store'});res.end();return}
     if(path.startsWith('/media/public/')){const key=path.slice('/media/public/'.length);
+      if(key==='demo-dealer-logo.svg'&&!real){res.writeHead(200,{'content-type':'image/svg+xml','x-content-type-options':'nosniff'});
+        res.end('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" rx="36" fill="#17464a"/><text x="100" y="122" fill="#e4f6ec" font-size="78" text-anchor="middle" font-family="Arial">CM</text></svg>');return}
       if(/^demo-[a-z0-9-]+-[0-5]\.svg$/.test(key)&&!real){res.writeHead(200,{'content-type':'image/svg+xml','cache-control':'public,max-age=3600','x-content-type-options':'nosniff'});res.end(demoSvg(key));return}
       if(media){const bytes=await media.readPublic(key),type=key.endsWith('.avif')?'image/avif':'image/webp';res.writeHead(200,{'content-type':type,'x-content-type-options':'nosniff'});res.end(bytes);return}
       res.writeHead(404);res.end();return;

@@ -70,6 +70,17 @@ test('LST-05/06/17: photos become metadata-free WebP/AVIF; papers remain moderat
   }finally{await rm(temp,{recursive:true,force:true})}
 });
 
+test('moderator verifies auction grade and mileage only after a sheet exists',async()=>{
+  const service=new ListingService(new MemoryListingStore(),new CatalogService(new MemoryCatalogStore()),billing);
+  const draft=await service.createDraft(seller);
+  await assert.rejects(service.verifyAuctionSheet(moderator,draft.id,'4.5',20000),/No auction sheet/);
+  await service.setAuctionSheet(seller,draft.id,'private.pdf','public.webp');
+  await assert.rejects(service.verifyAuctionSheet(seller,draft.id,'4.5',20000),/Moderator required/);
+  await assert.rejects(service.verifyAuctionSheet(moderator,draft.id,'4.5',-1),/Valid auction/);
+  const verified=await service.verifyAuctionSheet(moderator,draft.id,'4.5',20000);
+  assert.deepEqual(verified.auctionSheet,{privateKey:'private.pdf',displayKey:'public.webp',status:'verified',grade:'4.5',mileageKm:20000});
+});
+
 test('LST-01/09/10/11/13/14: payment, review, price audit, material edit, expiry and sold outcome',async()=>{
   let now=new Date('2026-10-17T00:00:00Z');
   const service=new ListingService(new MemoryListingStore(),new CatalogService(new MemoryCatalogStore()),billing,()=>now);
