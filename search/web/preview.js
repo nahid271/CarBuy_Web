@@ -1,0 +1,1 @@
+try {const id=location.pathname.split('/').pop();const key='carbuy:recent';const ids=JSON.parse(localStorage.getItem(key)||'[]').filter(x=>x!==id);ids.unshift(id);localStorage.setItem(key,JSON.stringify(ids.slice(0,12)))}catch{}
