@@ -54,7 +54,7 @@ Only `CARBUY_LISTINGS_FILE` is required; other paths are optional and fall back 
 - `GET /api/app-search?route=/cars&cursor=...` — next 24 cards for mobile consumers.
 - `GET /api/home?locale=en|bn` — discovery modules.
 - `GET /api/recent?ids=id1,id2&locale=en|bn` — live public cards only, maximum 20 IDs.
-- `GET /preview/:id` — small public preview until vehicle detail section 9.6.
+- `GET /car/:id` and `/bn/car/:id` — full 9.6 vehicle detail page; `/preview/:id` redirects to it.
 
 The production target migration is [`sql/004_search.sql`](sql/004_search.sql), applied after 9.3 and 9.4 migrations. It adds filter indexes, a paid-promotion table and a public-only SQL search view with RLS. A production `SearchStore` must query that view with parameterized SQL and transactional metrics updates; the runnable local service currently scans the file-backed domain stores. Connect real identity, payment webhook proof, media CDN, rate limiting, analytics, and persistent saved searches/alerts before public launch. Demo browser storage is device-specific and does not send notifications.
 

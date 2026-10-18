@@ -80,6 +80,7 @@ createServer(async (req,res) => {
       if(req.method==='POST' && action==='demo-reject') {const b=await body(req);json(res,200,await service.reject(moderator,id,b.note??'Please review the details'));return;}
       if(req.method==='POST' && action==='demo-remove') {const b=await body(req);json(res,200,await service.remove(moderator,id,b.note??'Removed by moderator'));return;}
       if(req.method==='POST' && action==='demo-check-papers') {json(res,200,await service.checkPapers(moderator,id));return;}
+      if(req.method==='POST' && action==='demo-verify-auction-sheet') {const b=await body(req);json(res,200,await service.verifyAuctionSheet(moderator,id,String(b.grade??''),Number(b.mileageKm)));return;}
       if(req.method==='POST' && action==='edit-live') {const b=await body(req);json(res,200,await service.editLive(seller,id,b.patch));return;}
       if(req.method==='POST' && action==='sold') {const b=await body(req);json(res,200,await service.markSold(seller,id,b.soldVia));return;}
       if(req.method==='POST' && action==='relist-sold') {json(res,200,await service.relistSold(seller,id));return;}

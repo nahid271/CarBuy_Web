@@ -133,6 +133,18 @@ export class ListingService {
       bump(listing, now); audit(state, listing, actor, 'auction_sheet_uploaded', now); return listing;
     });
   }
+  async verifyAuctionSheet(actor: Actor, id: string, grade: string, mileageKm: number): Promise<Listing> {
+    moderator(actor); const now = this.clock();
+    if (!grade.trim() || grade.length > 24 || !Number.isInteger(mileageKm) || mileageKm < 0 || mileageKm > 1_000_000)
+      throw new Error('Valid auction grade and mileage required');
+    return this.store.transaction(state => {
+      const listing = get(state, id);
+      if (!listing.auctionSheet) throw new Error('No auction sheet uploaded');
+      listing.auctionSheet = { ...listing.auctionSheet, status: 'verified', grade: grade.trim(), mileageKm };
+      bump(listing, now); audit(state, listing, actor, 'auction_sheet_verified', now, `Grade ${grade.trim()}, ${mileageKm} km`);
+      return listing;
+    });
+  }
   async checkPapers(actor: Actor, id: string): Promise<Listing> {
     moderator(actor); const now = this.clock();
     return this.store.transaction(state => {
