@@ -17,6 +17,10 @@ import type { SearchCard, SearchQuery, SearchResult } from './types.ts';
 import { VehicleDetailService } from '../../vehicle-detail/src/service.ts';
 import { VehicleDetailHttp } from '../../vehicle-detail/src/http.ts';
 import { MemoryActivityStore, JsonActivityStore } from '../../vehicle-detail/src/store.ts';
+import { MemoryMessagingStore, JsonMessagingStore } from '../../messaging/src/store.ts';
+import { MessagingService } from '../../messaging/src/service.ts';
+import { MessagingHttp } from '../../messaging/src/http.ts';
+import { LocalChatImages } from '../../messaging/src/attachments.ts';
 
 const root=join(dirname(fileURLToPath(import.meta.url)),'..');
 const port=Number(process.env.PORT??4175);
@@ -29,14 +33,24 @@ const media=real?new LocalMediaStore(process.env.CARBUY_MEDIA_DIR??join(root,'..
 const promotions=process.env.CARBUY_PROMOTIONS_FILE?new JsonPromotionPort(process.env.CARBUY_PROMOTIONS_FILE):{async active(){return real?[]:demoPromotions}};
 const service=new SearchService({listings,catalog,dealers,promotions});
 const activity=real?new JsonActivityStore(join(root,'..','vehicle-detail','.local','activity.json')):new MemoryActivityStore();
+const messageStore=real?new JsonMessagingStore(join(root,'..','messaging','.local','messages.json')):new MemoryMessagingStore();
+const messaging=new MessagingService({store:messageStore,listings,alerts:{async target(id){return !real&&['demo-private','demo-dealer'].includes(id)?{
+  phone:'+8801700000000',pushEnabled:false,smsOptIn:true,emailOptIn:false}:undefined}}});
 const detailService=new VehicleDetailService({listings,catalog,search:service,dealers,activity,
   profiles:{async privateSeller(id){return !real&&id==='demo-private'?{id,name:'Rahim Ahmed',memberSince:'2023-03-01T00:00:00Z',
     phoneVerified:true,responseHours:3,phone:'+8801700000002',whatsapp:'+8801700000002'}:undefined}},
   translation:real?undefined:{async translate(text,to){if(text==='Well maintained vehicle with service records available for inspection.')
     return to==='bn'?'ভালোভাবে রক্ষণাবেক্ষণ করা গাড়ি। সার্ভিস রেকর্ড পরিদর্শনের জন্য পাওয়া যাবে।':'Well maintained vehicle with service records available for inspection.';return undefined}},
   billing:real?undefined:{async createCheckout(order){return {url:`/car/${order.listingId}?demoOrder=${order.id}`,reference:`DEMO-${order.id}`}},
-    async verify(order,proof){return proof===`demo:${order.id}`}},trackMetrics:!real});
+    async verify(order,proof){return proof===`demo:${order.id}`}},trackMetrics:!real,
+  messaging:{contact:async(viewer,id,channel,proof)=>{const result=await messaging.contact({...viewer,role:'buyer'},id,channel,proof);
+      return {id:'id' in result?result.id:undefined}},
+    reveal:async(viewer,id,proof)=>messaging.reveal({...viewer,role:'buyer'},id,proof),
+    responseHours:async id=>messaging.responseHours(id)}});
 const detailHttp=new VehicleDetailHttp(detailService,activity,!real,(process.env.PUBLIC_BASE_URL??`http://127.0.0.1:${port}`).replace(/\/$/,''));
+const messagingHttp=new MessagingHttp(messaging,new LocalChatImages(join(root,'..','messaging','.local','images')),
+  req=>detailHttp.identity(req),!real);
+setInterval(()=>messaging.dispatchSellerFallbacks().catch(error=>console.error('Messaging fallback worker:',error)),60_000).unref();
 const escape=(x:unknown)=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 const json=(res:ServerResponse,status:number,value:unknown)=>{res.writeHead(status,{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'});res.end(JSON.stringify(value))};
 const localeText=(locale:'en'|'bn',en:string,bn:string)=>locale==='bn'?bn:en;
@@ -78,6 +92,7 @@ createServer(async(req,res)=>{
   try{
     const url=new URL(req.url??'/',`http://127.0.0.1:${port}`),path=url.pathname;
     if(await detailHttp.handle(req,res,url))return;
+    if(await messagingHttp.handle(req,res,url))return;
     if(req.method!=='GET'){json(res,405,{error:'Method not allowed'});return}
     if(path==='/sell'){
       const body='<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sell a car | CarBuy</title><link rel="stylesheet" href="/styles.css"><body><header class="site-header"><a class="brand" href="/">carbuy<span>.</span></a><a class="top-link" href="/">← Back to search</a></header><main class="seller-handoff"><p class="eyebrow">SELL ON CARBUY</p><h1>Create your listing</h1><p>The private seller listing flow is provided by the 9.3 Listings module. Start its local demo with <code>cd listings && npm run demo</code>, then open the seller studio.</p><a class="primary-button" href="http://127.0.0.1:4173/">Open seller studio ↗</a></main></body></html>';
@@ -110,4 +125,4 @@ createServer(async(req,res)=>{
     await page(res,path,url.search);
   }catch(error){const message=String((error as Error).message??error),bad=/Invalid|Unknown|Choose|too long|must not exceed|outside selected division/.test(message);
     json(res,bad?400:500,{error:bad?message:'Search is unavailable. Please try again.'});if(!bad)console.error(error)}
-}).listen(port,'127.0.0.1',()=>console.log(`CarBuy 9.5 search: http://127.0.0.1:${port}/`));
+}).listen(port,'127.0.0.1',()=>console.log(`CarBuy 9.2–9.7 buyer demo: http://127.0.0.1:${port}/`));

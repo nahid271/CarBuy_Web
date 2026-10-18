@@ -49,7 +49,7 @@ function setup(){
     $('reveal-chassis').disabled=true;notify(t('Chassis reveal was logged.','চেসিস নম্বর দেখার ঘটনা লগ হয়েছে।'))}));
   for(const channel of ['chat','call','whatsapp']){const button=$(channel);if(!button)continue;
     button.addEventListener('click',()=>run(async()=>{const result=await post('contact',{channel});
-      if(result.url)location.href=result.url;else notify(t('Chat lead recorded. Messaging opens in section 9.7.','চ্যাট লিড সংরক্ষিত। মেসেজিং ৯.৭ অংশে আসবে।'))}))}
+      if(result.url)location.href=result.url;else notify(t('Chat is unavailable. Please try again.','চ্যাট পাওয়া যাচ্ছে না। আবার চেষ্টা করুন।'))}))}
   $('report-car').addEventListener('click',()=>$('report-dialog').showModal());
   $('submit-report').addEventListener('click',e=>{e.preventDefault();run(async()=>{await post('report',{reason:$('report-reason').value,note:$('report-note').value});
     $('report-dialog').close();notify(t('Thank you. Your report was recorded.','ধন্যবাদ। আপনার রিপোর্ট সংরক্ষিত হয়েছে।'))})});

@@ -19,6 +19,7 @@ function card(card){
 }
 function setupLanguage(){
   $('language').textContent=bn?'English':'বাংলা';
+  $('inbox-link').href=bn?'/bn/inbox':'/inbox';
   const current=location.pathname;
   $('language').href=`${bn?(current.replace(/^\/bn/,'')||'/'):(current==='/'?'/bn':`/bn${current}`)}${location.search}`;
   if(bn){$('hero-title').innerHTML='আপনার পছন্দের গাড়ি খুঁজুন।<br><em>ভরসা নিয়ে এগিয়ে যান।</em>';
@@ -28,7 +29,7 @@ function setupLanguage(){
     $('search-title').textContent='বিক্রির জন্য গাড়ি';$('top-q').placeholder='মেক, মডেল, এলাকা বা কীওয়ার্ড দিয়ে খুঁজুন';
     document.querySelector('#top-search button').textContent='খুঁজুন →';
     const translations={
-      '.top-nav a[href="/cars"]':'গাড়ি দেখুন','.top-nav a[href="/#how"]':'যেভাবে কাজ করে','.sell-link':'গাড়ি বিক্রি করুন ↗',
+      '.top-nav a[href="/cars"]':'গাড়ি দেখুন','.top-nav a[href="/#how"]':'যেভাবে কাজ করে','#inbox-link':'ইনবক্স','.sell-link':'গাড়ি বিক্রি করুন ↗',
       '.hero-promises':'✓ লাইভ বিজ্ঞাপন   ✓ যাচাইকৃত তথ্য   ✓ লাখে দাম',
       '#explore .section-head h2':'যা জরুরি, তা দিয়ে শুরু করুন','#explore .text-link':'সব গাড়ি দেখুন →',
       '.explore-panel:nth-child(1) h3':'জনপ্রিয় মডেল','.explore-panel:nth-child(2) h3':'বাজেট অনুযায়ী',

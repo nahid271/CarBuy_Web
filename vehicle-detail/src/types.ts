@@ -1,6 +1,8 @@
 import type { SearchCard } from '../../search/src/types.ts';
 
 export type Viewer={id:string;phoneVerified:boolean};
+export type MessagingPort={contact(viewer:Viewer,id:string,channel:'chat'|'call'|'whatsapp',proof?:string):Promise<{id?:string}>;
+  reveal(viewer:Viewer,id:string,proof?:string):Promise<void>;responseHours(sellerId:string):Promise<number|null>};
 export type PrivateSeller={id:string;name:string;memberSince:string;phoneVerified:boolean;responseHours?:number;phone:string;whatsapp?:string};
 export type SellerProfilePort={privateSeller(id:string):Promise<PrivateSeller|undefined>};
 export type TranslationPort={translate(text:string,to:'en'|'bn'):Promise<string|undefined>};
@@ -19,7 +21,7 @@ export type VehicleDetail={
     taxTokenExpiry:string|null;fitnessExpiry:string|null};
   seller:SellerCard;similar:SearchCard[];priceHistory:Array<{priceBdt:number;at:string}>;daysListed:number;
   runningCost:{engineBand:string;fuel:string;sourceUrl:string};
-  publishedAt:string;closedAt:string|null;canContact:boolean;
+  publishedAt:string;closedAt:string|null;canContact:boolean;sellerResponseHours:number|null;
 };
 export type DetailOutcome={kind:'detail';detail:VehicleDetail}|{kind:'redirect';to:string};
 export type LeadRecord={id:string;listingId:string;buyerId:string;channel:'chat'|'call'|'whatsapp';at:string};

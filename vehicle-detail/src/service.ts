@@ -3,7 +3,7 @@ import type { CatalogService } from '../../vehicle-data/src/catalog.ts';
 import type { Listing, ListingStore } from '../../listings/src/types.ts';
 import type { DealerStore } from '../../dealers/src/types.ts';
 import type { SearchService } from '../../search/src/service.ts';
-import type { ActivityStore, BillingPort, DetailOutcome, PrivateSeller, SellerProfilePort, TranslationPort, VehicleDetail, Viewer, VerificationOrder } from './types.ts';
+import type { ActivityStore, BillingPort, DetailOutcome, MessagingPort, PrivateSeller, SellerProfilePort, TranslationPort, VehicleDetail, Viewer, VerificationOrder } from './types.ts';
 
 const day=86_400_000;
 const copy=<T>(x:T):T=>structuredClone(x);
@@ -24,10 +24,10 @@ function closedTime(listing:Listing,status:'sold'|'expired'):number{
 export class VehicleDetailService {
   private readonly args:{listings:ListingStore;catalog:CatalogService;search:SearchService;dealers?:DealerStore;
     profiles:SellerProfilePort;activity:ActivityStore;translation?:TranslationPort;billing?:BillingPort;
-    verificationPriceBdt?:number;clock?:()=>Date;trackMetrics?:boolean};
+    verificationPriceBdt?:number;clock?:()=>Date;trackMetrics?:boolean;messaging?:MessagingPort};
   constructor(args:{listings:ListingStore;catalog:CatalogService;search:SearchService;dealers?:DealerStore;
     profiles:SellerProfilePort;activity:ActivityStore;translation?:TranslationPort;billing?:BillingPort;
-    verificationPriceBdt?:number;clock?:()=>Date;trackMetrics?:boolean}){this.args=args}
+    verificationPriceBdt?:number;clock?:()=>Date;trackMetrics?:boolean;messaging?:MessagingPort}){this.args=args}
   private now(){return (this.args.clock??(()=>new Date()))()}
   private async listing(id:string){if(!idPattern.test(id))throw new DetailError(400,'Invalid car ID');
     const found=(await this.args.listings.read()).listings.find(x=>x.id===id);
@@ -74,7 +74,8 @@ export class VehicleDetailService {
       daysListed:Math.max(0,Math.floor(((status==='live'?now.getTime():closedTime(item,status))-Date.parse(item.publishedAt??item.createdAt))/day)),
       runningCost:{engineBand:engineBand(d.engineCc),fuel:d.fuel??'',sourceUrl:'https://brta.gov.bd/pages/static-pages/6922e058933eb65569e269cd'},
       publishedAt:item.publishedAt??item.createdAt,closedAt:status==='live'?null:new Date(closedTime(item,status)).toISOString(),
-      canContact:status==='live'&&Boolean(item.sellerType==='dealer'?(org?.phones.length):privateProfile?.phone)};
+      canContact:status==='live',
+      sellerResponseHours:(await this.args.messaging?.responseHours(item.sellerId))??privateProfile?.responseHours??null};
     return {kind:'detail',detail};
   }
   async translate(id:string,to:'en'|'bn'){
@@ -84,14 +85,15 @@ export class VehicleDetailService {
     const translated=await this.args.translation.translate(description,to);
     if(!translated)throw new DetailError(503,'Translation is unavailable');return {text:translated,language:to};
   }
-  async revealChassis(viewer:Viewer|undefined,id:string){
+  async revealChassis(viewer:Viewer|undefined,id:string,proof=''){
     if(!viewer)throw new DetailError(401,'Sign in to view the chassis number');
     const {item}=await this.visible(id);const chassis=item.data.chassisNumber;
     if(!chassis)throw new DetailError(404,'Chassis number unavailable');
+    await this.args.messaging?.reveal(viewer,id,proof);
     await this.args.activity.transaction(state=>{state.reveals.push({id:randomUUID(),listingId:id,buyerId:viewer.id,at:this.now().toISOString()})});
     return {chassisNumber:chassis};
   }
-  async contact(viewer:Viewer|undefined,id:string,channel:'chat'|'call'|'whatsapp'){
+  async contact(viewer:Viewer|undefined,id:string,channel:'chat'|'call'|'whatsapp',proof=''){
     if(!viewer)throw new DetailError(401,'Sign in to contact the seller');
     if(!viewer.phoneVerified)throw new DetailError(403,'Verify your phone to contact the seller');
     if(!['chat','call','whatsapp'].includes(channel))throw new DetailError(400,'Invalid contact channel');
@@ -100,10 +102,11 @@ export class VehicleDetailService {
     const privateProfile=item.sellerType==='private'?await this.args.profiles.privateSeller(item.sellerId):undefined;
     const phone=item.sellerType==='dealer'?org?.phones[0]:privateProfile?.phone;
     const whatsapp=item.sellerType==='dealer'?org?.whatsapp:privateProfile?.whatsapp??phone;
-    if(!phone)throw new DetailError(503,'Seller contact is unavailable');
+    if(!phone&&channel!=='chat')throw new DetailError(503,'Seller contact is unavailable');
+    const conversation=await this.args.messaging?.contact(viewer,id,channel,proof);
     await this.args.activity.transaction(state=>{state.leads.push({id:randomUUID(),listingId:id,buyerId:viewer.id,channel,at:this.now().toISOString()})});
     if(this.args.trackMetrics)await this.args.listings.transaction(state=>{const row=state.listings.find(x=>x.id===id);if(row)row.metrics[channel]++});
-    if(channel==='chat')return {channel,chatId:`${id}:${viewer.id}`,message:'Chat handoff reserved for 9.7 messaging'};
+    if(channel==='chat')return {channel,chatId:conversation?.id??`${id}:${viewer.id}`,url:conversation?.id?`/chat/${conversation.id}`:undefined};
     const number=channel==='whatsapp'?whatsapp:phone;
     return {channel,url:channel==='call'?`tel:${number}`:`https://wa.me/${number!.replace(/\D/g,'')}`};
   }

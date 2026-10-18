@@ -1,0 +1,24 @@
+const esc=(x:unknown)=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
+export function renderMessaging(input:{locale:'en'|'bn';seller:boolean;threadId:string|null}){
+  const {locale,seller,threadId}=input,bn=locale==='bn',t=(en:string,bd:string)=>bn?bd:en;
+  const title=threadId?t('Car conversation','গাড়ির কথোপকথন'):seller?t('Seller inbox','বিক্রেতার ইনবক্স'):t('Your inbox','আপনার ইনবক্স');
+  return `<!doctype html><html lang="${locale}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="robots" content="noindex,nofollow"><title>${esc(title)} | CarBuy</title><link rel="stylesheet" href="/messaging.css">
+    <script type="application/json" id="messaging-bootstrap">${JSON.stringify(input).replace(/</g,'\\u003c')}</script><script src="/messaging.js" defer></script></head>
+    <body><header class="topbar"><a class="brand" href="/">carbuy<span>.</span></a><nav><a href="/cars">${t('Browse cars','গাড়ি দেখুন')}</a><a href="${seller?'/seller-inbox':'/inbox'}">${t('Inbox','ইনবক্স')}</a><a href="${bn?'':'/bn'}/${threadId?`chat/${threadId}`:seller?'seller-inbox':'inbox'}${seller&&threadId?'?as=seller':''}">${bn?'English':'বাংলা'}</a></nav></header>
+    <main class="shell"><aside class="rail"><a class="back" href="${seller?'/seller-inbox':'/inbox'}">← ${t('All conversations','সব কথোপকথন')}</a>
+      <p class="kicker">${seller?t('SELLER WORKSPACE','বিক্রেতার ওয়ার্কস্পেস'):t('BUYER WORKSPACE','ক্রেতার ওয়ার্কস্পেস')}</p><h1>${esc(title)}</h1>
+      <p class="sub">${t('Every enquiry stays linked to its car. Contact details are shared only after a verified action.','প্রতিটি অনুসন্ধান গাড়ির সাথে যুক্ত থাকে। যাচাইকৃত পদক্ষেপের পরেই যোগাযোগের তথ্য শেয়ার হয়।')}</p>
+      <div id="account" class="account"></div><div id="thread-list" class="thread-list"></div><div id="lead-list" class="lead-list"></div></aside>
+    <section class="workspace"><div id="empty" class="empty"><div class="empty-icon">✉</div><h2>${t('A clearer way to talk cars','গাড়ি নিয়ে সহজ কথোপকথন')}</h2>
+      <p>${t('Choose a conversation, or open a car and tap Chat. Messages update live while this page is open.','একটি কথোপকথন বেছে নিন, অথবা গাড়ির পেজে Chat চাপুন। পেজ খোলা থাকলে বার্তা সরাসরি আপডেট হবে।')}</p>
+      <a href="/cars">${t('Explore cars','গাড়ি দেখুন')} ↗</a></div>
+      <div id="thread" hidden><div class="thread-head"><div><p class="kicker">${t('CAR CONVERSATION','গাড়ির কথোপকথন')}</p><h2 id="car-title">${t('Loading…','লোড হচ্ছে…')}</h2><a id="car-link" href="/cars">${t('View car','গাড়ি দেখুন')} ↗</a></div><div class="thread-actions"><button id="report" type="button">⚑ ${t('Report','রিপোর্ট')}</button><button id="block" type="button">⊘ ${t('Block','ব্লক')}</button></div></div>
+      <div class="safety">${t('Never send booking money or clearance fees before checking the car and papers.','গাড়ি ও কাগজপত্র দেখার আগে বুকিং টাকা বা ক্লিয়ারেন্স ফি পাঠাবেন না।')}</div>
+      <div id="messages" class="messages" aria-live="polite"></div>
+      <div class="compose"><div class="quick"><button data-quick="available" type="button">${t('Is it available?','গাড়িটি কি আছে?')}</button><button data-quick="papers" type="button">${t('Can I see the papers?','কাগজপত্র দেখতে পারি?')}</button><button data-quick="price" type="button">${t('Best price?','সর্বনিম্ন দাম কত?')}</button></div>
+      <form id="composer"><label class="sr" for="message-input">${t('Message','বার্তা')}</label><textarea id="message-input" maxlength="2000" rows="2" placeholder="${t('Write a message…','বার্তা লিখুন…')}"></textarea>
+        <input id="image-input" type="file" accept="image/jpeg,image/png,image/webp,image/avif" hidden><button id="attach" type="button" title="${t('Attach image','ছবি যুক্ত করুন')}">＋</button><button class="send" type="submit">${t('Send','পাঠান')} ↗</button></form><small>${t('Photos are private to this conversation. High-risk messages are held for review.','ছবি শুধু এই কথোপকথনের জন্য। ঝুঁকিপূর্ণ বার্তা পর্যালোচনার জন্য আটকানো হয়।')}</small></div></div>
+    </section></main><dialog id="report-dialog"><form method="dialog"><h2>${t('Report conversation','কথোপকথন রিপোর্ট')}</h2><label>${t('Reason','কারণ')}<select id="reason"><option value="scam">${t('Suspected scam','প্রতারণার সন্দেহ')}</option><option value="abuse">${t('Abuse','অপব্যবহার')}</option><option value="spam">${t('Spam','স্প্যাম')}</option><option value="other">${t('Other','অন্যান্য')}</option></select></label><label>${t('Note','নোট')}<textarea id="note" maxlength="1000"></textarea></label><div class="dialog-buttons"><button value="cancel">${t('Cancel','বাতিল')}</button><button id="submit-report" value="submit">${t('Send report','রিপোর্ট পাঠান')}</button></div></form></dialog>
+    <div id="toast" role="status" aria-live="polite"></div></body></html>`;
+}

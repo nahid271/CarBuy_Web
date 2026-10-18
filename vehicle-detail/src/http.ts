@@ -24,6 +24,7 @@ export class VehicleDetailHttp {
   private session(req:IncomingMessage):Session|undefined{
     const match=/(?:^|;\s*)carbuy_demo_session=([a-f0-9]{64})(?:;|$)/.exec(req.headers.cookie??'');return match?this.sessions.get(match[1]):undefined;
   }
+  identity(req:IncomingMessage){const session=this.session(req);return session?{viewer:session.viewer,csrf:session.csrf}:undefined}
   private requirePost(req:IncomingMessage,url:URL,session?:Session){
     if(req.headers.origin!==url.origin)throw new DetailError(403,'Same-origin request required');
     if(!session)throw new DetailError(401,'Sign in to continue');
@@ -68,10 +69,12 @@ export class VehicleDetailHttp {
           const to=url.searchParams.get('to');if(to!=='en'&&to!=='bn')throw new DetailError(400,'Choose a translation language');
           json(res,200,await this.service.translate(id,to));return true}
         if(req.method==='POST'&&action){const session=this.session(req);this.requirePost(req,url,session);const viewer=session!.viewer;
-          if(action==='chassis'){json(res,200,await this.service.revealChassis(viewer,id));return true}
+          if(action==='chassis'){const input=await body(req);if(input.trap)throw new DetailError(403,'Bot check failed');
+            json(res,200,await this.service.revealChassis(viewer,id,String(input.botProof??'')));return true}
           if(action==='contact'){const input=await body(req),channel=input.channel;
+            if(input.trap)throw new DetailError(403,'Bot check failed');
             if(channel!=='chat'&&channel!=='call'&&channel!=='whatsapp')throw new DetailError(400,'Invalid contact channel');
-            json(res,200,await this.service.contact(viewer,id,channel));return true}
+            json(res,200,await this.service.contact(viewer,id,channel,String(input.botProof??'')));return true}
           if(action==='report'){const input=await body(req),reason=input.reason,note=input.note??'';
             if(!['suspected_scam','incorrect_details','sold_elsewhere','other'].includes(String(reason))||typeof note!=='string')throw new DetailError(400,'Invalid report');
             json(res,201,await this.service.report(viewer,id,reason as 'suspected_scam'|'incorrect_details'|'sold_elsewhere'|'other',note));return true}
@@ -79,7 +82,8 @@ export class VehicleDetailHttp {
         }
       }
       throw new DetailError(405,'Method not allowed');
-    }catch(error){const status=error instanceof DetailError?error.status:500;
+    }catch(error){const status=error instanceof DetailError?error.status:
+      typeof error==='object'&&error!==null&&'status' in error&&typeof error.status==='number'?error.status:500;
       if(status===500)console.error(error);
       json(res,status,{error:status===500?'Vehicle detail is unavailable. Please try again.':(error as Error).message});return true}
   }

@@ -11,6 +11,8 @@ cd vehicle-data && npm ci
 cd ../listings && npm ci
 cd ../dealers && npm ci
 cd ../search && npm ci
+cd ../vehicle-detail && npm ci
+cd ../messaging && npm ci
 npm run check
 npm test
 npm run demo
