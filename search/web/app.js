@@ -26,7 +26,36 @@ function setupLanguage(){
     $('quick-q').placeholder='টয়োটা অ্যাক্সিও, নোয়া, X-Trail...';
     document.querySelector('#quick-search button').textContent='গাড়ি খুঁজুন →';
     $('search-title').textContent='বিক্রির জন্য গাড়ি';$('top-q').placeholder='মেক, মডেল, এলাকা বা কীওয়ার্ড দিয়ে খুঁজুন';
-    document.querySelector('#top-search button').textContent='খুঁজুন →';}
+    document.querySelector('#top-search button').textContent='খুঁজুন →';
+    const translations={
+      '.top-nav a[href="/cars"]':'গাড়ি দেখুন','.top-nav a[href="/#how"]':'যেভাবে কাজ করে','.sell-link':'গাড়ি বিক্রি করুন ↗',
+      '.hero-promises':'✓ লাইভ বিজ্ঞাপন   ✓ যাচাইকৃত তথ্য   ✓ লাখে দাম',
+      '#explore .section-head h2':'যা জরুরি, তা দিয়ে শুরু করুন','#explore .text-link':'সব গাড়ি দেখুন →',
+      '.explore-panel:nth-child(1) h3':'জনপ্রিয় মডেল','.explore-panel:nth-child(2) h3':'বাজেট অনুযায়ী',
+      '.explore-panel:nth-child(3) h3':'বডি স্টাইল','#fresh .section-head h2':'নতুন গাড়ি','#fresh .text-link':'সব নতুন বিজ্ঞাপন →',
+      '#recent-section h2':'সম্প্রতি দেখা','#filters .filter-heading h2':'ফিল্টার','#clear-filters':'সব মুছুন',
+      '.filter-group:nth-of-type(1) h3':'গাড়ি','.filter-group:nth-of-type(2) h3':'দাম ও বয়স',
+      '.filter-group:nth-of-type(3) h3':'বিবরণ','.filter-group:nth-of-type(4) h3':'বিক্রেতা ও এলাকা',
+      '.filter-group:nth-of-type(5) h3':'যাচাই করা তথ্য','.apply-button':'গাড়ি দেখুন →',
+      '#empty-state h2':'কোনো গাড়ি পাওয়া যায়নি','#empty-state p':'ফিল্টার কমিয়ে আবার খুঁজুন অথবা সার্চ সংরক্ষণ করুন।',
+      '#save-alert':'এই ডিভাইসে সার্চ রাখুন','#save-few':'এই ডিভাইসে সার্চ রাখুন',
+    };
+    for(const [selector,value] of Object.entries(translations))if(value&&document.querySelector(selector))document.querySelector(selector).textContent=value;
+    const labels={condition:'অবস্থা',make:'মেক',model:'মডেল',grade:'গ্রেড',priceMin:'সর্বনিম্ন দাম',priceMax:'সর্বোচ্চ দাম',
+      yearMin:'মডেল সাল থেকে',yearMax:'মডেল সাল পর্যন্ত',regMin:'নিবন্ধন সাল থেকে',regMax:'নিবন্ধন সাল পর্যন্ত',
+      mileageMin:'সর্বনিম্ন মাইলেজ',mileageMax:'সর্বোচ্চ মাইলেজ',ccMin:'ইঞ্জিন সিসি থেকে',ccMax:'ইঞ্জিন সিসি পর্যন্ত',
+      fuel:'জ্বালানি',body:'বডি',transmission:'গিয়ার',colour:'রং',seller:'বিক্রেতা',division:'বিভাগ',district:'জেলা',area:'এলাকা',
+      auctionVerified:'অকশন শিট যাচাইকৃত',papersChecked:'কাগজপত্র যাচাই',verifiedDealer:'যাচাইকৃত ডিলার',minAuctionGrade:'সর্বনিম্ন অকশন গ্রেড'};
+    for(const [name,value] of Object.entries(labels)){const label=$('filters-form').elements[name]?.closest('label');
+      const node=label&&[...label.childNodes].find(x=>x.nodeType===3&&x.textContent.trim());if(node)node.textContent=` ${value} `;}
+    const any={condition:'যেকোনো অবস্থা',make:'যেকোনো মেক',grade:'যেকোনো গ্রেড',fuel:'যেকোনো জ্বালানি',body:'যেকোনো বডি',
+      transmission:'যেকোনো গিয়ার',colour:'যেকোনো রং',seller:'যেকোনো বিক্রেতা',division:'সব বিভাগ',district:'সব জেলা',area:'সব এলাকা'};
+    for(const [id,value] of Object.entries(any))$(id).querySelector('option[value=""]').textContent=value;
+    const sortLabels=['সেরা মিল','সর্বশেষ','দাম: কম থেকে বেশি','দাম: বেশি থেকে কম','সবচেয়ে কম মাইলেজ','নতুন মডেল সাল'];
+    [...$('sort').options].forEach((option,i)=>option.textContent=sortLabels[i]);
+    document.querySelector('.results-toolbar label').firstChild.textContent='সাজান ';
+    document.querySelector('#few-results strong').textContent='অল্প কয়েকটি গাড়ি পাওয়া গেছে।';
+  }
   $('quick-search').action=bn?'/bn/cars':'/cars';$('top-search').action=bn?'/bn/cars':'/cars';
 }
 function optionRows(select,options,current){

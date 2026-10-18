@@ -184,7 +184,7 @@ export class SearchService {
     const base:SearchQuery={locale,sort:'newest',page:1};const latest=await this.search(base);
     const popular=latest.facets.model.filter(x=>x.count>0).sort((a,b)=>b.count-a.count).slice(0,6);
     const {items}=await this.index(locale);
-    const budgets=[10,20,30,50].map(maxLakh=>({maxLakh,count:items.filter(x=>x.card.priceLakh<=maxLakh).length}));
+    const budgets=[10,20,30,50].map(maxLakh=>({maxLakh,count:items.filter(x=>x.card.priceLakh<=maxLakh).length})).filter(x=>x.count>0);
     return {popularModels:popular,bodies:latest.facets.body.filter(x=>x.count>0).sort((a,b)=>b.count-a.count).slice(0,6),
       budgets,newListings:latest.cards.slice(0,8),featured:latest.cards.filter(x=>x.placement==='featured').slice(0,4),total:latest.total};
   }
