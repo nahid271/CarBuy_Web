@@ -5,7 +5,7 @@ const t=(en,bd)=>bn?bd:en;
 const $=id=>document.getElementById(id);
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const state={data:boot.data,catalog:null,locations:null,loading:false};
-const savedKey='carbuy:saved-cars',alertKey='carbuy:saved-searches';
+const savedKey='carbuy:saved-cars';let buyerSession=null;
 const readLocal=key=>{try{return JSON.parse(localStorage.getItem(key)||'[]')}catch{return []}};
 const writeLocal=(key,value)=>{try{localStorage.setItem(key,JSON.stringify(value))}catch{}};
 const urlFor=(params,path=location.pathname)=>`${path}${params.toString()?`?${params}`:''}`;
@@ -20,6 +20,8 @@ function card(card){
 function setupLanguage(){
   $('language').textContent=bn?'English':'বাংলা';
   $('inbox-link').href=bn?'/bn/inbox':'/inbox';
+  $('saved-link').href=bn?'/bn/saved':'/saved';
+  $('saved-shortcut').href=bn?'/bn/saved':'/saved';
   const current=location.pathname;
   $('language').href=`${bn?(current.replace(/^\/bn/,'')||'/'):(current==='/'?'/bn':`/bn${current}`)}${location.search}`;
   if(bn){$('hero-title').innerHTML='আপনার পছন্দের গাড়ি খুঁজুন।<br><em>ভরসা নিয়ে এগিয়ে যান।</em>';
@@ -29,7 +31,7 @@ function setupLanguage(){
     $('search-title').textContent='বিক্রির জন্য গাড়ি';$('top-q').placeholder='মেক, মডেল, এলাকা বা কীওয়ার্ড দিয়ে খুঁজুন';
     document.querySelector('#top-search button').textContent='খুঁজুন →';
     const translations={
-      '.top-nav a[href="/cars"]':'গাড়ি দেখুন','.top-nav a[href="/#how"]':'যেভাবে কাজ করে','#inbox-link':'ইনবক্স','.sell-link':'গাড়ি বিক্রি করুন ↗',
+      '.top-nav a[href="/cars"]':'গাড়ি দেখুন','.top-nav a[href="/#how"]':'যেভাবে কাজ করে','#saved-link':'সংরক্ষিত গাড়ি','#inbox-link':'ইনবক্স','.sell-link':'গাড়ি বিক্রি করুন ↗',
       '.hero-promises':'✓ লাইভ বিজ্ঞাপন   ✓ যাচাইকৃত তথ্য   ✓ লাখে দাম',
       '#explore .section-head h2':'যা জরুরি, তা দিয়ে শুরু করুন','#explore .text-link':'সব গাড়ি দেখুন →',
       '.explore-panel:nth-child(1) h3':'জনপ্রিয় মডেল','.explore-panel:nth-child(2) h3':'বাজেট অনুযায়ী',
@@ -39,9 +41,10 @@ function setupLanguage(){
       '.filter-group:nth-of-type(3) h3':'বিবরণ','.filter-group:nth-of-type(4) h3':'বিক্রেতা ও এলাকা',
       '.filter-group:nth-of-type(5) h3':'যাচাই করা তথ্য','.apply-button':'গাড়ি দেখুন →',
       '#empty-state h2':'কোনো গাড়ি পাওয়া যায়নি','#empty-state p':'ফিল্টার কমিয়ে আবার খুঁজুন অথবা সার্চ সংরক্ষণ করুন।',
-      '#save-alert':'এই ডিভাইসে সার্চ রাখুন','#save-few':'এই ডিভাইসে সার্চ রাখুন',
+      '#save-alert':'অ্যালার্ট তৈরি করুন','#save-few':'অ্যালার্ট তৈরি করুন','#save-search-top':'সার্চ অ্যালার্ট তৈরি করুন →',
     };
     for(const [selector,value] of Object.entries(translations))if(value&&document.querySelector(selector))document.querySelector(selector).textContent=value;
+    $('saved-shortcut').innerHTML='♡ <span>সংরক্ষিত</span>';$('saved-shortcut').setAttribute('aria-label','সংরক্ষিত গাড়ি');
     const labels={condition:'অবস্থা',make:'মেক',model:'মডেল',grade:'গ্রেড',priceMin:'সর্বনিম্ন দাম',priceMax:'সর্বোচ্চ দাম',
       yearMin:'মডেল সাল থেকে',yearMax:'মডেল সাল পর্যন্ত',regMin:'নিবন্ধন সাল থেকে',regMax:'নিবন্ধন সাল পর্যন্ত',
       mileageMin:'সর্বনিম্ন মাইলেজ',mileageMax:'সর্বোচ্চ মাইলেজ',ccMin:'ইঞ্জিন সিসি থেকে',ccMax:'ইঞ্জিন সিসি পর্যন্ত',
@@ -116,10 +119,26 @@ function renderHome(home){
   $('body-links').innerHTML=home.bodies.map(x=>`<a href="${bn?'/bn':''}/cars?body=${encodeURIComponent(x.id)}">${esc(x.label)} <small>${x.count}</small></a>`).join('');
 }
 async function recent(){
-  const ids=readLocal('carbuy:recent');if(!ids.length)return;
-  try{const res=await fetch(`/api/recent?ids=${encodeURIComponent(ids.join(','))}&locale=${locale}`);if(!res.ok)return;
+  const ids=readLocal('carbuy:recent');
+  try{let res;if(buyerSession?.viewer){if(ids.length){await savedRequest('/api/saved/recent/sync','POST',{ids:ids.slice(0,20)});writeLocal('carbuy:recent',[])}
+      res=await fetch(`/api/saved/recent?locale=${locale}`)}else if(ids.length)res=await fetch(`/api/recent?ids=${encodeURIComponent(ids.join(','))}&locale=${locale}`);else return;
+    if(!res.ok)return;
     const cards=await res.json();if(cards.length){$('recent-section').classList.remove('hidden');$('recent-cards').innerHTML=cards.map(card).join('')}}catch{}
 }
+async function ensureBuyer(){if(buyerSession?.viewer)return buyerSession;
+  if(!buyerSession?.demo){alert(t('Sign in and verify your phone to save cars.','গাড়ি সংরক্ষণ করতে সাইন ইন ও ফোন যাচাই করুন।'));throw new Error('Sign-in required')}
+  if(!confirm(t('Use the fake, phone-verified demo buyer account? No real account is created.','নকল, ফোন-যাচাইকৃত ডেমো ক্রেতা অ্যাকাউন্ট ব্যবহার করবেন? আসল অ্যাকাউন্ট তৈরি হবে না।')))throw new Error('Cancelled');
+  const response=await fetch('/api/demo/sign-in',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
+  const result=await response.json();if(!response.ok)throw new Error(result.error||'Sign-in failed');buyerSession=result;
+  const recentIds=readLocal('carbuy:recent');if(recentIds.length){await savedRequest('/api/saved/recent/sync','POST',{ids:recentIds.slice(0,20)});writeLocal('carbuy:recent',[])}
+  await syncSaved();return buyerSession;
+}
+async function savedRequest(path,method,payload){const response=await fetch(path,{method,headers:{'content-type':'application/json','x-csrf-token':buyerSession?.csrf??''},
+  body:payload===undefined?undefined:JSON.stringify(payload)});const result=await response.json();if(!response.ok)throw new Error(result.error||'Action failed');return result}
+async function syncSaved(){if(!buyerSession?.viewer)return;const response=await fetch('/api/saved/cars');if(!response.ok)return;
+  writeLocal(savedKey,(await response.json()).map(x=>x.id));document.querySelectorAll('[data-save]').forEach(button=>{
+    const saved=readLocal(savedKey).includes(button.dataset.save);button.classList.toggle('saved',saved);button.textContent=saved?'♥':'♡';
+    button.setAttribute('aria-label',saved?'Remove saved car':'Save car')})}
 function applyForm(e){
   e.preventDefault();const params=new URLSearchParams();const form=$('filters-form');
   const keyword=$('top-q').value.trim();if(keyword)params.set('q',keyword);
@@ -131,9 +150,10 @@ function applyForm(e){
   location.href=urlFor(params);
 }
 function wire(){
-  document.addEventListener('click',e=>{const button=e.target.closest('[data-save]');if(!button)return;
-    const id=button.dataset.save;let ids=readLocal(savedKey);ids=ids.includes(id)?ids.filter(x=>x!==id):[id,...ids].slice(0,200);writeLocal(savedKey,ids);
-    button.classList.toggle('saved',ids.includes(id));button.textContent=ids.includes(id)?'♥':'♡';button.setAttribute('aria-label',ids.includes(id)?'Remove saved car':'Save car')});
+  document.addEventListener('click',async e=>{const button=e.target.closest('[data-save]');if(!button)return;button.disabled=true;
+    try{await ensureBuyer();const id=button.dataset.save,ids=readLocal(savedKey),saved=ids.includes(id);
+      await savedRequest(`/api/saved/cars/${encodeURIComponent(id)}`,saved?'DELETE':'POST');await syncSaved();
+    }catch(error){if(!['Cancelled','Sign-in required'].includes(error.message))alert(error.message)}finally{button.disabled=false}});
   if(boot.route.kind!=='search')return;
   $('filters-form').addEventListener('submit',applyForm);
   $('top-search').addEventListener('submit',e=>{e.preventDefault();const q=$('top-q').value.trim();location.href=`${bn?'/bn':''}/cars${q?`?q=${encodeURIComponent(q)}`:''}`});
@@ -142,7 +162,7 @@ function wire(){
   $('make').addEventListener('change',()=>modelsFor($('make').value,state.data.facets,[]));
   $('division').addEventListener('change',()=>{const division=$('division').value;const options=state.data.facets.district.filter(x=>!division||state.locations.districts.find(d=>d.id===x.id)?.divisionId===division);optionRows($('district'),options,'');optionRows($('area'),[],'')});
   $('district').addEventListener('change',()=>{optionRows($('area'),state.data.facets.area,'')});
-  for(const id of ['save-alert','save-few'])$(id).addEventListener('click',()=>{const searches=readLocal(alertKey),url=location.pathname+location.search;if(!searches.includes(url))searches.unshift(url);writeLocal(alertKey,searches.slice(0,30));$(id).textContent=t('Saved on this device','এই ডিভাইসে সংরক্ষিত')});
+  for(const id of ['save-alert','save-few','save-search-top'])$(id).addEventListener('click',()=>{location.href=`${bn?'/bn':''}/saved?search=${encodeURIComponent(location.pathname+location.search)}#alerts`});
   $('filters').querySelector('.filter-heading').addEventListener('click',()=>{if(window.innerWidth<=760)$('filters').classList.toggle('open')});
   if(window.matchMedia('(max-width: 760px)').matches&&'IntersectionObserver'in window){
     $('pagination').classList.add('hidden');const observer=new IntersectionObserver(async entries=>{
@@ -157,8 +177,9 @@ function wire(){
 }
 async function init(){
   setupLanguage();$('home').classList.toggle('hidden',boot.route.kind!=='home');$('search').classList.toggle('hidden',boot.route.kind!=='search');
+  try{buyerSession=await (await fetch('/api/detail/session')).json();if(!buyerSession.viewer)writeLocal(savedKey,[])}catch{}
   try{const response=await fetch('/api/bootstrap');if(!response.ok)throw new Error('Bootstrap failed');const data=await response.json();state.catalog=data.catalog;state.locations=data;
     if(boot.route.kind==='home'){renderHome(boot.data);recent()}else renderSearch(boot.data);
-  }catch(error){console.error(error)}wire();
+  }catch(error){console.error(error)}wire();syncSaved().catch(()=>{});
 }
 init();

@@ -9,8 +9,14 @@ async function ensureBuyer(){let current=await sessionInfo();if(current.viewer)r
   if(!current.demo){notify(t('Sign in and verify your phone to continue.','এগোতে সাইন ইন ও ফোন যাচাই করুন।'));throw new Error('Sign-in required')}
   if(!confirm(t('Use the fake, phone-verified demo buyer account? No real account is created.','নকল, ফোন-যাচাইকৃত ডেমো ক্রেতা অ্যাকাউন্ট ব্যবহার করবেন? আসল অ্যাকাউন্ট তৈরি হবে না।')))throw new Error('Cancelled');
   const response=await fetch('/api/demo/sign-in',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
-  if(!response.ok)throw new Error((await response.json()).error);session=await response.json();notify(t('Signed in as demo buyer.','ডেমো ক্রেতা হিসেবে সাইন ইন হয়েছে।'));return session;
+  const result=await response.json();if(!response.ok)throw new Error(result.error);session=result;
+  const recent=safeArray('carbuy:recent');if(recent.length){await savedRequest('/api/saved/recent/sync','POST',{ids:recent.slice(0,20)});saveArray('carbuy:recent',[])}
+  await savedRequest(`/api/saved/recent/${encodeURIComponent(detail.id)}`,'POST');
+  const savedResponse=await fetch('/api/saved/cars');if(savedResponse.ok)saveArray('carbuy:saved-cars',(await savedResponse.json()).map(x=>x.id));
+  notify(t('Signed in as demo buyer.','ডেমো ক্রেতা হিসেবে সাইন ইন হয়েছে।'));return session;
 }
+async function savedRequest(path,method,payload){const response=await fetch(path,{method,headers:{'content-type':'application/json','x-csrf-token':session?.csrf??''},
+  body:payload===undefined?undefined:JSON.stringify(payload)});const result=await response.json();if(!response.ok)throw new Error(result.error||'Action failed');return result}
 async function post(action,payload={}){const current=await ensureBuyer();const response=await fetch(`/api/detail/${encodeURIComponent(detail.id)}/${action}`,{
   method:'POST',headers:{'content-type':'application/json','x-csrf-token':current.csrf},body:JSON.stringify(payload)});
   const result=await response.json();if(!response.ok)throw new Error(result.error||'Action failed');return result}
@@ -25,9 +31,17 @@ function safeArray(key){try{return JSON.parse(localStorage.getItem(key)||'[]')}c
 function saveArray(key,list){try{localStorage.setItem(key,JSON.stringify(list))}catch{}}
 function setup(){
   const recent=safeArray('carbuy:recent').filter(id=>id!==detail.id);recent.unshift(detail.id);saveArray('carbuy:recent',recent.slice(0,12));
-  const saved=safeArray('carbuy:saved-cars').includes(detail.id);$('save-car').textContent=saved?`♥ ${t('Saved','সংরক্ষিত')}`:`♡ ${t('Save','সংরক্ষণ')}`;
-  $('save-car').addEventListener('click',()=>{let ids=safeArray('carbuy:saved-cars');ids=ids.includes(detail.id)?ids.filter(x=>x!==detail.id):[detail.id,...ids].slice(0,200);
-    saveArray('carbuy:saved-cars',ids);$('save-car').textContent=ids.includes(detail.id)?`♥ ${t('Saved','সংরক্ষিত')}`:`♡ ${t('Save','সংরক্ষণ')}`});
+  const paintSaved=saved=>$('save-car').textContent=saved?`♥ ${t('Saved','সংরক্ষিত')}`:`♡ ${t('Save','সংরক্ষণ')}`;
+  paintSaved(safeArray('carbuy:saved-cars').includes(detail.id));
+  sessionInfo().then(async current=>{if(!current.viewer){saveArray('carbuy:saved-cars',[]);paintSaved(false);return}
+    const ids=safeArray('carbuy:recent');if(ids.length){await savedRequest('/api/saved/recent/sync','POST',{ids:ids.slice(0,20)});saveArray('carbuy:recent',[])}
+    await savedRequest(`/api/saved/recent/${encodeURIComponent(detail.id)}`,'POST');
+    const response=await fetch('/api/saved/cars');if(response.ok){const saved=(await response.json()).map(x=>x.id);saveArray('carbuy:saved-cars',saved);paintSaved(saved.includes(detail.id))}}).catch(()=>{});
+  $('save-car').addEventListener('click',()=>run(async()=>{await ensureBuyer();const saved=safeArray('carbuy:saved-cars').includes(detail.id);
+    await savedRequest(`/api/saved/cars/${encodeURIComponent(detail.id)}`,saved?'DELETE':'POST');
+    const response=await fetch('/api/saved/cars');if(!response.ok)throw new Error('Could not refresh saved cars');
+    const ids=(await response.json()).map(x=>x.id);saveArray('carbuy:saved-cars',ids);paintSaved(ids.includes(detail.id));
+    notify(ids.includes(detail.id)?t('Car added to saved cars.','গাড়ি সংরক্ষিত হয়েছে।'):t('Car removed from saved cars.','গাড়ি সরানো হয়েছে।'))}));
   $('share-car').addEventListener('click',()=>run(async()=>{const url=location.href;
     if(navigator.share){await navigator.share({title:detail.title,url})}else{await navigator.clipboard.writeText(url);notify(t('Link copied.','লিংক কপি হয়েছে।'))}}));
   $('gallery-main').addEventListener('click',()=>openLightbox(photoIndex));$('all-photos').addEventListener('click',()=>openLightbox(photoIndex));

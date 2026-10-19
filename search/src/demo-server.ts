@@ -21,6 +21,9 @@ import { MemoryMessagingStore, JsonMessagingStore } from '../../messaging/src/st
 import { MessagingService } from '../../messaging/src/service.ts';
 import { MessagingHttp } from '../../messaging/src/http.ts';
 import { LocalChatImages } from '../../messaging/src/attachments.ts';
+import { MemorySavedStore, JsonSavedStore } from '../../saved-alerts/src/store.ts';
+import { SavedService } from '../../saved-alerts/src/service.ts';
+import { SavedHttp } from '../../saved-alerts/src/http.ts';
 
 const root=join(dirname(fileURLToPath(import.meta.url)),'..');
 const port=Number(process.env.PORT??4175);
@@ -50,7 +53,11 @@ const detailService=new VehicleDetailService({listings,catalog,search:service,de
 const detailHttp=new VehicleDetailHttp(detailService,activity,!real,(process.env.PUBLIC_BASE_URL??`http://127.0.0.1:${port}`).replace(/\/$/,''));
 const messagingHttp=new MessagingHttp(messaging,new LocalChatImages(join(root,'..','messaging','.local','images')),
   req=>detailHttp.identity(req),!real);
+const savedStore=real?new JsonSavedStore(join(root,'..','saved-alerts','.local','saved.json')):new MemorySavedStore();
+const savedService=new SavedService({store:savedStore,listings,catalog,search:service});
+const savedHttp=new SavedHttp(savedService,req=>detailHttp.identity(req));
 setInterval(()=>messaging.dispatchSellerFallbacks().catch(error=>console.error('Messaging fallback worker:',error)),60_000).unref();
+setInterval(()=>savedService.processAlerts().catch(error=>console.error('Saved alert worker:',error)),60_000).unref();
 const escape=(x:unknown)=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 const json=(res:ServerResponse,status:number,value:unknown)=>{res.writeHead(status,{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'});res.end(JSON.stringify(value))};
 const localeText=(locale:'en'|'bn',en:string,bn:string)=>locale==='bn'?bn:en;
@@ -93,6 +100,7 @@ createServer(async(req,res)=>{
     const url=new URL(req.url??'/',`http://127.0.0.1:${port}`),path=url.pathname;
     if(await detailHttp.handle(req,res,url))return;
     if(await messagingHttp.handle(req,res,url))return;
+    if(await savedHttp.handle(req,res,url))return;
     if(req.method!=='GET'){json(res,405,{error:'Method not allowed'});return}
     if(path==='/sell'){
       const body='<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sell a car | CarBuy</title><link rel="stylesheet" href="/styles.css"><body><header class="site-header"><a class="brand" href="/">carbuy<span>.</span></a><a class="top-link" href="/">← Back to search</a></header><main class="seller-handoff"><p class="eyebrow">SELL ON CARBUY</p><h1>Create your listing</h1><p>The private seller listing flow is provided by the 9.3 Listings module. Start its local demo with <code>cd listings && npm run demo</code>, then open the seller studio.</p><a class="primary-button" href="http://127.0.0.1:4173/">Open seller studio ↗</a></main></body></html>';
@@ -125,4 +133,4 @@ createServer(async(req,res)=>{
     await page(res,path,url.search);
   }catch(error){const message=String((error as Error).message??error),bad=/Invalid|Unknown|Choose|too long|must not exceed|outside selected division/.test(message);
     json(res,bad?400:500,{error:bad?message:'Search is unavailable. Please try again.'});if(!bad)console.error(error)}
-}).listen(port,'127.0.0.1',()=>console.log(`CarBuy 9.2–9.7 buyer demo: http://127.0.0.1:${port}/`));
+}).listen(port,'127.0.0.1',()=>console.log(`CarBuy 9.2–9.8 buyer demo: http://127.0.0.1:${port}/`));
