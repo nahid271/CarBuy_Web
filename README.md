@@ -4,6 +4,7 @@ This repository contains CarBuy Bangladesh marketplace MVP modules for PRD secti
 
 | Module | Scope | Guide |
 | --- | --- | --- |
+| `marketplace/` | Buyer-facing storefront (Next.js, Tailwind CSS, shadcn/ui, Motion, Lenis) with a monotone theme | `cd marketplace && npm install && npm run dev` |
 | `vehicle-data/` | Bangladesh-focused car catalogue, chassis decoding, validation, bilingual values and admin mapping workflow | [Vehicle data README](vehicle-data/README.md) |
 | `listings/` | Private/dealer listing drafts, photos and papers, pricing, moderation, publishing, expiry and seller workflows | [Listings README](listings/README.md) |
 | `dealers/` | Verified showroom profiles, stock, bulk import, credits, leads, alerts, reporting and mobile portal | [Dealers README](dealers/README.md) |
