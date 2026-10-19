@@ -72,11 +72,13 @@ createServer(async (req,res) => {
         json(res,200,await service.setAuctionSheet(seller,id,privateKey,displayKey));return;
       }
       if(req.method==='POST' && action==='submit') {json(res,200,await service.beginSubmission(seller,id));return;}
+      if(req.method==='POST' && action==='cancel-checkout') {json(res,200,await service.cancelCheckout(seller,id));return;}
       if(req.method==='POST' && action==='demo-pay') {
         const listing=await service.getOwn(seller,id);const order=listing.feeOrders.at(-1)!;
         json(res,200,order.kind==='renewal'?await service.confirmRenewal(id,order.id,`demo:${order.id}`):await service.confirmPayment(id,order.id,`demo:${order.id}`));return;
       }
       if(req.method==='POST' && action==='demo-approve') {json(res,200,await service.approve(moderator,id));return;}
+      if(req.method==='POST' && action==='demo-request-changes') {const b=await body(req);json(res,200,await service.requestChanges(moderator,id,b.note??'Please retake the photos in daylight'));return;}
       if(req.method==='POST' && action==='demo-reject') {const b=await body(req);json(res,200,await service.reject(moderator,id,b.note??'Please review the details'));return;}
       if(req.method==='POST' && action==='demo-remove') {const b=await body(req);json(res,200,await service.remove(moderator,id,b.note??'Removed by moderator'));return;}
       if(req.method==='POST' && action==='demo-check-papers') {json(res,200,await service.checkPapers(moderator,id));return;}

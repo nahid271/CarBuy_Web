@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS carbuy_listings (
   vehicle_id uuid REFERENCES carbuy_vehicles(id),
   seller_id uuid NOT NULL,
   seller_type text NOT NULL CHECK (seller_type IN ('private','dealer')),
-  status text NOT NULL CHECK (status IN ('draft','pending_payment','pending_review','live','rejected','sold','withdrawn','expired','removed')),
+  status text NOT NULL CHECK (status IN ('draft','pending_payment','pending_review','changes_requested','live','rejected','sold','withdrawn','expired','removed')),
   version integer NOT NULL DEFAULT 1 CHECK (version > 0),
   public_data jsonb NOT NULL DEFAULT '{}'::jsonb CHECK (jsonb_typeof(public_data) = 'object'),
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -84,9 +84,13 @@ CREATE TABLE IF NOT EXISTS carbuy_listing_orders (
   listing_id uuid NOT NULL REFERENCES carbuy_listings(id),
   kind text NOT NULL CHECK (kind IN ('initial','renewal')),
   amount_bdt integer NOT NULL CHECK (amount_bdt >= 0),
-  status text NOT NULL CHECK (status IN ('pending','paid','refund_pending','refunded')),
+  status text NOT NULL CHECK (status IN ('pending','paid','cancelled','refund_pending','refunded')),
+  -- Listing status to restore when an unpaid checkout is cancelled.
+  from_status text CHECK (from_status IN ('draft','changes_requested','expired','withdrawn')),
   gateway_reference text UNIQUE,
-  created_at timestamptz NOT NULL DEFAULT now()
+  created_at timestamptz NOT NULL DEFAULT now(),
+  cancelled_at timestamptz,
+  CHECK (status <> 'cancelled' OR cancelled_at IS NOT NULL)
 );
 CREATE TABLE IF NOT EXISTS carbuy_listing_price_history (
   id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

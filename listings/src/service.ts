@@ -1,11 +1,15 @@
 import { randomUUID } from 'node:crypto';
 import type { CatalogService } from '../../vehicle-data/src/catalog.ts';
 import { chassisFormat } from '../../vehicle-data/src/validation.ts';
-import { editableFields, materialFields, validateForSubmission } from './validation.ts';
-import type { Actor, BillingPort, FeeOrder, Listing, ListingData, ListingPhoto, ListingStore, Paper, Reminder, SoldVia, State, TranslationPort } from './types.ts';
+import { editableFields, materialFields, soldViaValues, validateForSubmission } from './validation.ts';
+import type { Actor, BillingPort, FeeOrder, Listing, ListingData, ListingPhoto, ListingStore, Paper, Reminder, SoldVia, State, Status, TranslationPort } from './types.ts';
 
 const copy = <T>(value: T): T => structuredClone(value);
 const active = new Set(['pending_payment','pending_review','live']);
+const gateway: Actor = { id: 'payment_gateway', role: 'system' };
+// An unpaid checkout older than this is cancelled by expireAndRemind so it
+// stops holding one of the seller's three active slots.
+export const staleCheckoutMs = 24 * 3_600_000;
 const iso = (date: Date) => date.toISOString();
 const addDays = (date: Date, days: number) => new Date(date.getTime() + days * 86_400_000);
 function sellerKey(actor:Actor) { return actor.sellerType==='dealer' && actor.dealerOrgId ? actor.dealerOrgId : actor.id; }
@@ -23,12 +27,37 @@ function checkLimit(state: State, listing: Listing) {
   const others = state.listings.filter(x => x.id !== listing.id && x.sellerId === listing.sellerId && active.has(x.status)).length;
   if (others >= 3) throw new Error('Private sellers can have at most 3 active cars; use a dealer account for more');
 }
+function passes(check: () => unknown) { try { check(); return true; } catch { return false; } }
 function checkChassis(state: State, listing: Listing) {
   const chassis = chassisFormat(listing.data.chassisNumber ?? '');
   if (!chassis.valid) throw new Error(chassis.reason);
   if (state.listings.some(x => x.id !== listing.id && x.status === 'live' && chassisFormat(x.data.chassisNumber ?? '').valid
     && (chassisFormat(x.data.chassisNumber ?? '') as {normalized:string}).normalized === chassis.normalized)) throw new Error('A live listing already uses this chassis number');
   return chassis.normalized;
+}
+// A paid fee still covers this submission: a material edit inside the paid
+// term, or a first submission the moderator returned with "request changes".
+export function feeCovered(listing: Listing, now: Date): boolean {
+  if (listing.publishedAt) return Boolean(listing.expiresAt && Date.parse(listing.expiresAt) > now.getTime());
+  const order = listing.feeOrders.at(-1);
+  return listing.status === 'changes_requested' && order?.kind === 'initial' && order.status === 'paid';
+}
+const restoredStatus = (order: FeeOrder): Status => order.fromStatus ?? (order.kind === 'renewal' ? 'expired' : 'draft');
+// An abandoned checkout returns the car to where it was before payment:
+// draft (or changes requested) for a submission, expired/withdrawn for a renewal.
+function cancelPending(listing: Listing, now: Date) {
+  const order = listing.feeOrders.at(-1);
+  if (listing.status !== 'pending_payment' || order?.status !== 'pending') throw new Error('No checkout to cancel');
+  order.status = 'cancelled'; order.cancelledAt = iso(now); listing.status = restoredStatus(order);
+  return order;
+}
+function refundLate(state: State, listing: Listing, order: FeeOrder, now: Date) {
+  order.status = 'refund_pending'; bump(listing, now);
+  audit(state, listing, gateway, 'late_payment_refund_pending', now, order.id);
+}
+function startTerm(listing: Listing, now: Date) {
+  listing.status = 'live'; listing.expiresAt = iso(addDays(now, listing.sellerType === 'private' ? 60 : 30));
+  listing.closedAt = undefined; listing.reminderDaysSent = [];
 }
 export const sellSteps = ['chassis','confirm_vehicle','condition_papers','mileage_price','photos','description','location','preview','payment','review'] as const;
 
@@ -65,7 +94,7 @@ export class ListingService {
       id: x.id, status: x.status, version: x.version, priceBdt: x.data.priceBdt, modelId: x.data.modelId,
       impressions: x.metrics.impressions??0, views: x.metrics.views, contacts: { chat: x.metrics.chat, call: x.metrics.call, whatsapp: x.metrics.whatsapp },
       saves: x.metrics.saves, daysLive: x.publishedAt ? Math.max(0, Math.floor((Math.min(now, x.closedAt ? Date.parse(x.closedAt) : now) - Date.parse(x.publishedAt)) / 86_400_000)) : 0,
-      expiresAt: x.expiresAt,
+      expiresAt: x.expiresAt, moderationNote: x.moderationNote,
     }));
   }
   async saveDraft(actor: Actor, id: string, patch: Partial<ListingData>, expectedVersion?: number): Promise<Listing> {
@@ -73,7 +102,7 @@ export class ListingService {
     const now = this.clock();
     return this.store.transaction(state => {
       const listing = get(state, id); owner(actor, listing); requireVersion(listing, expectedVersion);
-      if (!['draft','rejected'].includes(listing.status) && !(listing.status==='pending_review' && listing.publishedAt)) throw new Error('Listing cannot be autosaved in this status');
+      if (!['draft','rejected','changes_requested'].includes(listing.status) && !(listing.status==='pending_review' && listing.publishedAt)) throw new Error('Listing cannot be autosaved in this status');
       listing.data = { ...listing.data, ...copy(patch) };
       if (listing.status === 'rejected') listing.status = 'draft';
       if (patch.priceBdt !== undefined && listing.priceHistory.at(-1)?.priceBdt !== patch.priceBdt)
@@ -85,7 +114,7 @@ export class ListingService {
     const now = this.clock();
     return this.store.transaction(state => {
       const listing = get(state, id); owner(actor, listing);
-      if (!['draft','rejected','live'].includes(listing.status)) throw new Error('Photos cannot be changed in this status');
+      if (!['draft','rejected','changes_requested','live'].includes(listing.status)) throw new Error('Photos cannot be changed in this status');
       if (listing.photos.length >= (listing.sellerType === 'dealer' ? 30 : 20)) throw new Error('Photo limit reached');
       if (listing.photos.some(x => x.sha256 === photo.sha256)) throw new Error('Duplicate photo');
       listing.photos.push({ ...copy(photo), position: listing.photos.length });
@@ -106,7 +135,7 @@ export class ListingService {
     const now = this.clock();
     return this.store.transaction(state => {
       const listing = get(state,id); owner(actor,listing);
-      if (!['draft','rejected','live'].includes(listing.status)) throw new Error('Photos cannot be changed in this status');
+      if (!['draft','rejected','changes_requested','live'].includes(listing.status)) throw new Error('Photos cannot be changed in this status');
       const index = listing.photos.findIndex(x=>x.id===photoId);
       if (index<0) throw new Error('Photo not found');
       listing.photos.splice(index,1);listing.photos.forEach((x,i)=>{x.position=i;});
@@ -168,16 +197,17 @@ export class ListingService {
     const now = this.clock();
     const listing = await this.store.transaction(state => {
       const item = get(state, id); owner(actor, item); requireVersion(item, current.version);
-      if (item.status !== 'draft') throw new Error('Only drafts can be submitted');
+      if (item.status !== 'draft' && item.status !== 'changes_requested') throw new Error('Only drafts can be submitted');
       checkLimit(state, item); checkChassis(state, item);
-      // A seller correcting an already-paid material edit keeps the existing
-      // term; a fresh fee is only due for a new listing or renewal.
-      if (item.publishedAt && item.expiresAt && Date.parse(item.expiresAt) > now.getTime()) {
+      // A seller correcting an already-paid material edit, or answering a
+      // moderator's change request, keeps the paid fee; a fresh fee is only
+      // due for a new listing or renewal.
+      if (feeCovered(item, now)) {
         item.status = 'pending_review'; item.submittedAt = iso(now); bump(item, now);
         audit(state, item, actor, 'paid_listing_resubmitted', now); return item;
       }
       const order: FeeOrder = { id: randomUUID(), kind: 'initial', amountBdt: item.sellerType === 'private' ? this.privateFeeBdt : 0,
-        status: 'pending', createdAt: iso(now) };
+        status: 'pending', createdAt: iso(now), fromStatus: item.status };
       item.feeOrders.push(order); item.status = 'pending_payment'; bump(item, now);
       audit(state, item, actor, 'checkout_started', now); return item;
     });
@@ -195,15 +225,47 @@ export class ListingService {
     const order = listing.feeOrders.find(x => x.id === orderId);
     if (!order || order.kind !== 'initial') throw new Error('Initial order not found');
     if (order.status === 'paid' && ['pending_review','live'].includes(listing.status)) return listing;
+    if (order.cancelledAt && order.status !== 'cancelled') return listing;
+    if (order.status === 'cancelled') return this.settleLatePayment(listing, order, proof);
     if (order.status !== 'pending' || listing.status !== 'pending_payment') throw new Error('Order cannot be confirmed');
     if (!await this.billing.verifyPayment(order, proof)) throw new Error('Payment not verified');
     const now = this.clock();
-    return this.store.transaction(state => {
+    const settled = await this.store.transaction(state => {
       const item = get(state, id); const current = item.feeOrders.find(x => x.id === orderId);
+      if (current?.status === 'cancelled') { refundLate(state, item, current, now); return item; }
       if (!current || current.status !== 'pending' || item.status !== 'pending_payment') throw new Error('Payment state changed');
       checkLimit(state, item); checkChassis(state, item);
       current.status = 'paid'; item.status = 'pending_review'; item.submittedAt = iso(now); bump(item, now);
-      audit(state, item, {id:'payment_gateway',role:'system'}, 'listing_fee_paid', now, orderId); return item;
+      audit(state, item, gateway, 'listing_fee_paid', now, orderId); return item;
+    });
+    return this.reconcileRefunds(id, settled);
+  }
+  // A gateway callback can arrive after the seller (or the stale-checkout
+  // sweep) cancelled the order. Accept it when the car can still take this
+  // payment without a second activation; otherwise hold it for refund.
+  private async settleLatePayment(snapshot: Listing, order: FeeOrder, proof: string): Promise<Listing> {
+    if (!await this.billing.verifyPayment(order, proof)) throw new Error('Payment not verified');
+    const valid = order.kind === 'renewal' || !(await validateForSubmission(snapshot, this.catalog, this.clock())).length;
+    const now = this.clock();
+    const settled = await this.store.transaction(state => {
+      const item = get(state, snapshot.id); const current = item.feeOrders.find(x => x.id === order.id)!;
+      if (current.status !== 'cancelled') return item;
+      const accept = valid && item.feeOrders.at(-1)?.id === current.id && item.status === restoredStatus(current)
+        && (current.kind === 'renewal' || item.version === snapshot.version)
+        && passes(() => checkLimit(state, item)) && passes(() => checkChassis(state, item));
+      if (!accept) { refundLate(state, item, current, now); return item; }
+      current.status = 'paid';
+      if (current.kind === 'renewal') startTerm(item, now); else { item.status = 'pending_review'; item.submittedAt = iso(now); }
+      bump(item, now); audit(state, item, gateway, 'late_payment_accepted', now, current.id); return item;
+    });
+    return this.reconcileRefunds(snapshot.id, settled);
+  }
+  async cancelCheckout(actor: Actor, id: string): Promise<Listing> {
+    const now = this.clock();
+    return this.store.transaction(state => {
+      const listing = get(state, id); owner(actor, listing);
+      const order = cancelPending(listing, now);
+      bump(listing, now); audit(state, listing, actor, 'checkout_cancelled', now, order.id); return listing;
     });
   }
   async approve(actor: Actor, id: string): Promise<Listing> {
@@ -233,18 +295,32 @@ export class ListingService {
       const order = listing.feeOrders.at(-1); if (!listing.publishedAt && order?.status === 'paid') order.status = 'refund_pending';
       bump(listing, now); audit(state, listing, actor, 'listing_rejected', now, note); return listing;
     });
-    return this.reconcileRefund(id, result);
+    return this.reconcileRefunds(id, result);
   }
-  private async reconcileRefund(id: string, listing: Listing): Promise<Listing> {
-    const order = listing.feeOrders.at(-1);
-    if (!order || order.status !== 'refund_pending' || !await this.billing.refund(order)) return listing;
+  // "Request changes" (TNS-04): the seller edits and resubmits under the fee
+  // already paid, so unlike reject nothing is refunded (PAY-08).
+  async requestChanges(actor: Actor, id: string, note: string): Promise<Listing> {
+    moderator(actor); const now = this.clock();
+    if (typeof note !== 'string' || !note.trim()) throw new Error('Tell the seller what to change');
     return this.store.transaction(state => {
-      const item = get(state, id); const current = item.feeOrders.find(x => x.id === order.id);
-      if (current?.status === 'refund_pending') current.status = 'refunded';
-      bump(item, this.clock()); return item;
+      const listing = get(state, id); if (listing.status !== 'pending_review') throw new Error('Listing is not pending review');
+      listing.status = 'changes_requested'; listing.moderationNote = note.trim();
+      bump(listing, now); audit(state, listing, actor, 'changes_requested', now, note); return listing;
     });
   }
-  async retryRefund(actor: Actor, id: string): Promise<Listing> { moderator(actor); return this.reconcileRefund(id, get(await this.store.read(), id)); }
+  private async reconcileRefunds(id: string, listing: Listing): Promise<Listing> {
+    let result = listing;
+    for (const order of listing.feeOrders.filter(x => x.status === 'refund_pending')) {
+      if (!await this.billing.refund(order)) continue;
+      result = await this.store.transaction(state => {
+        const item = get(state, id); const current = item.feeOrders.find(x => x.id === order.id);
+        if (current?.status === 'refund_pending') current.status = 'refunded';
+        bump(item, this.clock()); return item;
+      });
+    }
+    return result;
+  }
+  async retryRefund(actor: Actor, id: string): Promise<Listing> { moderator(actor); return this.reconcileRefunds(id, get(await this.store.read(), id)); }
   async editLive(actor: Actor, id: string, patch: Partial<ListingData>): Promise<Listing> {
     if (!patch || typeof patch !== 'object' || Array.isArray(patch) || Object.keys(patch).some(key => !editableFields.has(key as keyof ListingData))) throw new Error('Invalid listing fields');
     const now = this.clock();
@@ -268,7 +344,7 @@ export class ListingService {
     });
   }
   async markSold(actor: Actor, id: string, soldVia: SoldVia): Promise<Listing> {
-    if (!['carbuy','elsewhere','showroom_trade_in','didnt_sell'].includes(soldVia)) throw new Error('Choose where it sold');
+    if (!soldViaValues.includes(soldVia)) throw new Error('Choose where it sold');
     const now = this.clock();
     return this.store.transaction(state => {
       const listing = get(state, id); owner(actor, listing); if (listing.status !== 'live') throw new Error('Only live cars can be marked sold');
@@ -325,7 +401,7 @@ export class ListingService {
       const item = get(state, id); owner(actor, item);
       if (item.status !== 'expired' && item.status !== 'withdrawn') throw new Error('Only expired or withdrawn listings need renewal');
       checkLimit(state, item); checkChassis(state, item);
-      item.feeOrders.push({id:randomUUID(),kind:'renewal',amountBdt:item.sellerType === 'private' ? this.privateFeeBdt : 0,status:'pending',createdAt:iso(now)});
+      item.feeOrders.push({id:randomUUID(),kind:'renewal',amountBdt:item.sellerType === 'private' ? this.privateFeeBdt : 0,status:'pending',createdAt:iso(now),fromStatus:item.status});
       item.status='pending_payment'; bump(item,now); audit(state,item,actor,'renewal_started',now); return item;
     });
     const order=listing.feeOrders.at(-1)!; const checkout=await this.billing.createCheckout(order,listing);
@@ -335,20 +411,29 @@ export class ListingService {
   async confirmRenewal(id:string,orderId:string,proof:string):Promise<Listing> {
     const listing=get(await this.store.read(),id);const order=listing.feeOrders.find(x=>x.id===orderId);
     if(order?.kind==='renewal' && order.status==='paid' && listing.status==='live') return listing;
+    if(order?.kind==='renewal' && order.cancelledAt && order.status!=='cancelled') return listing;
+    if(order?.kind==='renewal' && order.status==='cancelled') return this.settleLatePayment(listing,order,proof);
     if(!order || order.kind!=='renewal' || order.status!=='pending' || listing.status!=='pending_payment') throw new Error('Renewal order not pending');
     if(!await this.billing.verifyPayment(order,proof)) throw new Error('Payment not verified');
     const now=this.clock();
-    return this.store.transaction(state=>{
+    const settled=await this.store.transaction(state=>{
       const item=get(state,id);const current=item.feeOrders.find(x=>x.id===orderId);
+      if(current?.status==='cancelled'){refundLate(state,item,current,now);return item;}
       if(!current || current.status!=='pending' || item.status!=='pending_payment') throw new Error('Payment state changed');
-      checkLimit(state,item);checkChassis(state,item);current.status='paid';item.status='live';item.expiresAt=iso(addDays(now,item.sellerType==='private'?60:30));item.closedAt=undefined;item.reminderDaysSent=[];
-      bump(item,now);audit(state,item,{id:'payment_gateway',role:'system'},'listing_renewed',now);return item;
+      checkLimit(state,item);checkChassis(state,item);current.status='paid';startTerm(item,now);
+      bump(item,now);audit(state,item,gateway,'listing_renewed',now);return item;
     });
+    return this.reconcileRefunds(id,settled);
   }
   async expireAndRemind(actor:Actor):Promise<Reminder[]> {
     system(actor);const now=this.clock();
     return this.store.transaction(state=>{
       const reminders:Reminder[]=[];
+      for(const listing of state.listings.filter(x=>x.status==='pending_payment')) {
+        const order=listing.feeOrders.at(-1);
+        if(order?.status!=='pending' || now.getTime()-Date.parse(order.createdAt)<staleCheckoutMs) continue;
+        cancelPending(listing,now);bump(listing,now);audit(state,listing,actor,'checkout_expired',now,order.id);
+      }
       for(const listing of state.listings.filter(x=>x.status==='live' && x.expiresAt)) {
         const ms=Date.parse(listing.expiresAt!)-now.getTime();
         if(ms<=0) {listing.status='expired';listing.closedAt=iso(now);bump(listing,now);audit(state,listing,actor,'listing_expired',now);continue;}

@@ -14,9 +14,10 @@ import { validateForSubmission } from '../../listings/src/validation.ts';
 import { DealerCreditBillingPort } from './credits.ts';
 import { csvTemplate, xlsxTemplate } from './bulk.ts';
 import { DealerService, demoDealerConfig } from './service.ts';
+import { renderShowroomPage } from './showroom-page.ts';
 import { JsonDealerStore } from './store.ts';
 import { localDemoVault } from './vault.ts';
-import type { DealerActor, NotificationPort, PaymentGateway } from './types.ts';
+import type { BuyerActor, DealerActor, NotificationPort, PaymentGateway } from './types.ts';
 
 const root=join(dirname(fileURLToPath(import.meta.url)),'..');
 const local=join(root,'.local');
@@ -24,6 +25,8 @@ const port=Number(process.env.PORT??4174);
 const owner:DealerActor={id:'demo-dealer-owner',role:'dealer_user',phoneVerified:true};
 const admin:DealerActor={id:'demo-moderator',role:'moderator'};
 const system:DealerActor={id:'demo-system',role:'system'};
+// Stands in for a signed-in, phone-verified buyer on the public showroom page.
+const demoBuyer:BuyerActor={id:'demo-buyer',role:'buyer',phoneVerified:true};
 const catalog=new CatalogService(new MemoryCatalogStore());
 const dealerStore=new JsonDealerStore(join(local,'dealers.json'));
 const listingStore=new JsonListingStore(join(local,'listings.json'));
@@ -69,19 +72,9 @@ async function saveLogo(value:any):Promise<string>{
 }
 async function orgId():Promise<string>{const app=(await dealers.myApplications(owner)).find(x=>x.status==='verified'&&x.orgId);if(!app?.orgId)throw new Error('Apply for dealer verification first');return app.orgId}
 const mime:Record<string,string>={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.webp':'image/webp','.avif':'image/avif'};
-const escapeHtml=(value:unknown)=>String(value??'').replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]!));
 async function showroomPage(slug:string):Promise<string>{
-  const profile=await dealers.publicProfile(slug),snapshot=await catalog.snapshot();
-  const modelName=(id?:string)=>snapshot.models.find(x=>x.id===id)?.name.en??id??'Model';
-  const makeName=(id?:string)=>snapshot.makes.find(x=>x.id===id)?.name.en??id??'Vehicle';
-  const cards=profile.stock.map(car=>`<article class="panel" style="padding:0;overflow:hidden">
-    <div style="height:160px;background:#e2ede4;display:grid;place-items:center">${car.coverKey?`<img src="/media/public/${escapeHtml(car.coverKey)}" alt="${escapeHtml(makeName(car.makeId))} ${escapeHtml(modelName(car.modelId))}" style="width:100%;height:100%;object-fit:cover">`:'<span style="font-size:50px;color:#6e9e7c">◈</span>'}</div>
-    <div style="padding:17px"><span class="pill">${escapeHtml(car.stockStatus==='preorder'?'Pre-order':'Ready')}</span><h2 style="margin:11px 0 4px">${escapeHtml(makeName(car.makeId))} ${escapeHtml(modelName(car.modelId))}</h2><p class="smalltext muted">${escapeHtml(car.year)} · ${escapeHtml(car.stockNumber)} · ${escapeHtml(car.area)}, ${escapeHtml(car.district)}</p><b style="font-size:18px">৳${Number(car.priceBdt??0).toLocaleString('en-BD')}</b>${car.expectedArrival?`<p class="smalltext">Expected ${escapeHtml(car.expectedArrival)}</p>`:''}</div></article>`).join('');
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(profile.name)} · CarBuy</title><link rel="stylesheet" href="/styles.css"></head><body>
-    <header class="topbar"><a class="brand" href="/"><span class="brand-mark">C<span>›</span></span><span>CarBuy <small>VERIFIED DEALER</small></span></a><span class="demo-badge">LOCAL DEMO</span></header>
-    <main class="main" style="max-width:1050px"><div class="hero" style="margin-bottom:20px"><div style="display:flex;gap:18px;align-items:center">${profile.logoKey!=='demo'?`<img class="brandlogo" src="/media/public/${escapeHtml(profile.logoKey)}" alt="${escapeHtml(profile.name)} logo">`:''}<div><span class="pill">✓ Verified dealer</span><h1 style="margin:10px 0 5px;font-size:30px">${escapeHtml(profile.name)}</h1><p>${escapeHtml(profile.address)}, ${escapeHtml(profile.district)}</p></div></div></div>
-    <div class="two-col" style="grid-template-columns:1fr 1fr"><section class="panel"><h2>Visit the showroom</h2><p>${escapeHtml(profile.address)}, ${escapeHtml(profile.district)}</p><p class="smalltext muted">${escapeHtml(profile.hours)}</p><div class="form-actions"><a class="button" href="${escapeHtml(profile.mapUrl)}" target="_blank" rel="noopener noreferrer">Open map ↗</a><a class="button secondary" href="tel:${escapeHtml(profile.phones[0])}">Call ${escapeHtml(profile.phones[0])}</a><a class="button secondary" href="https://wa.me/${escapeHtml(profile.whatsapp.replace(/\D/g,''))}" target="_blank" rel="noopener noreferrer">WhatsApp ↗</a></div></section><section class="panel"><h2>About us</h2><p class="smalltext muted">${escapeHtml(profile.about)}</p><p class="smalltext muted">Verified on ${escapeHtml(profile.verifiedAt.slice(0,10))}.</p></section></div>
-    <div class="page-head" style="margin-top:16px"><div><div class="eyebrow">Showroom inventory</div><h2>${profile.stock.length} live cars</h2><p class="sub">Current stock from this verified dealer.</p></div></div><div class="cards">${cards||'<div class="empty"><strong>No live cars yet</strong>Check back for new arrivals.</div>'}</div></main></body></html>`;
+  return renderShowroomPage(await dealers.publicProfile(slug),await catalog.snapshot(),{revealUrl:'/api/demo/buyer/contact',
+    notice:'Local demo: Call and WhatsApp act as a sample signed-in, phone-verified buyer (demo-buyer) and log a lead. Real pages need buyer sign-in.'});
 }
 
 createServer(async(req,res)=>{
@@ -113,6 +106,7 @@ createServer(async(req,res)=>{
       }
       if(method==='POST'&&action==='publish'){json(res,200,await dealers.publishStock(owner,org,id));return}
       if(method==='POST'&&action==='demo-approve'){json(res,200,await listings.approve({id:admin.id,role:'moderator'},id));return}
+      if(method==='POST'&&action==='demo-request-changes'){const b=await requestBody(req);json(res,200,await listings.requestChanges({id:admin.id,role:'moderator'},id,b.note||'Please add the after-sales terms'));return}
       if(method==='POST'&&action==='demo-reject'){const b=await requestBody(req);json(res,200,await listings.reject({id:admin.id,role:'moderator'},id,b.note||'Please correct the car details'));return}
       if(method==='POST'&&action==='engagement'){const b=await requestBody(req);await listings.recordEngagement({id:system.id,role:'system'},id,b.kind);json(res,200,{ok:true});return}
     }
@@ -121,11 +115,12 @@ createServer(async(req,res)=>{
     if(method==='POST'&&path==='/api/bulk/report'){const b=await requestBody(req);json(res,200,await dealers.bulkReport(owner,await orgId(),await fileBytes(b.bytesBase64),b.fileName));return}
     if(method==='POST'&&path==='/api/bulk/import'){const b=await requestBody(req);json(res,200,await dealers.bulkAdd(owner,await orgId(),await fileBytes(b.bytesBase64),b.fileName));return}
     if(method==='POST'&&path==='/api/bulk/photo'){const b=await requestBody(req);json(res,200,await dealers.addBulkPhoto(owner,await orgId(),b.fileName,await fileBytes(b.bytesBase64)));return}
-    if(method==='POST'&&path==='/api/bulk/action'){const b=await requestBody(req);json(res,200,await dealers.bulkAction(owner,await orgId(),b.listingIds,b.action,b.value));return}
+    if(method==='POST'&&path==='/api/bulk/action'){const b=await requestBody(req);json(res,200,await dealers.bulkAction(owner,await orgId(),b.listingIds,b.action,b.action==='sold'?b.soldVia:b.value));return}
     if(method==='GET'&&path==='/api/credits'){const id=await orgId();json(res,200,{balance:await dealers.creditBalance(owner,id),packs:dealers.packs(),ledger:await dealers.ledger(owner,id)});return}
     if(method==='POST'&&path==='/api/credits/purchase'){const b=await requestBody(req);json(res,201,await dealers.startPackPurchase(owner,await orgId(),b.packId,b.method));return}
     if(method==='POST'&&path==='/api/demo/pay'){const b=await requestBody(req);json(res,200,await dealers.confirmPackPurchase(system,b.purchaseId,`demo:${b.purchaseId}`));return}
     if(method==='GET'&&path==='/api/leads'){json(res,200,await dealers.leads(owner,await orgId()));return}
+    if(method==='POST'&&path==='/api/demo/buyer/contact'){const b=await requestBody(req);json(res,200,await dealers.revealContact(demoBuyer,b.orgId,b.listingId,b.channel));return}
     if(method==='POST'&&path==='/api/demo/lead'){const b=await requestBody(req);json(res,201,await dealers.recordLead(system,await orgId(),b.listingId,b.buyerId||'demo-buyer',b.channel));return}
     const lead=/^\/api\/leads\/([a-f0-9-]+)$/.exec(path);
     if(method==='PATCH'&&lead){json(res,200,await dealers.updateLead(owner,await orgId(),lead[1],await requestBody(req)));return}

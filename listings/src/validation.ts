@@ -1,7 +1,7 @@
 import { bodyValues, fuelValues, transmissionValues } from '../../vehicle-data/src/values.ts';
 import { chassisFormat, validateBangladeshRegistration } from '../../vehicle-data/src/validation.ts';
 import type { CatalogService } from '../../vehicle-data/src/catalog.ts';
-import type { Listing, ListingData } from './types.ts';
+import type { Listing, ListingData, SoldVia } from './types.ts';
 
 const requiredText = (value: unknown) => typeof value === 'string' && value.trim().length > 0;
 const validDate = (value: string) => {
@@ -51,6 +51,7 @@ export async function validateForSubmission(listing: Listing, catalog: CatalogSe
   return errors;
 }
 
+export const soldViaValues: readonly SoldVia[] = ['carbuy','elsewhere','showroom_trade_in','didnt_sell'];
 export const editableFields = new Set<keyof ListingData>([
   'makeId','modelId','generationId','gradeId','gradeFreeText','manufactureYear','registrationYear','mileageKm','engineCc',
   'fuel','transmission','body','chassisNumber','condition','priceBdt','negotiable','district','area','colour',
