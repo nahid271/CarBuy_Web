@@ -1,6 +1,6 @@
 # CarBuy black-themed marketplace preview
 
-This is Toufiq's Next.js storefront, connected to the CarBuy sample inventory service in `../search`. It offers a dark default theme, search and filters, car detail pages, and safety/content guides. All cars, sellers, payments and trust badges in the local preview are **sample data**. The preview is deliberately marked `noindex`.
+This Next.js storefront connects to the CarBuy sample inventory service in `../search`. It offers a dark default theme, search and filters, car detail pages, and safety/content guides. All cars, sellers, payments and trust badges in the local preview are **sample data**. The preview is deliberately marked `noindex`.
 
 Use Node.js 22.18+ (Node.js 24 recommended). From the repository root, open two terminals:
 

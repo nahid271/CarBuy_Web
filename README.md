@@ -1,10 +1,10 @@
 # CarBuy MVP modules
 
-This repository contains Toufiq's black-themed CarBuy storefront and the Bangladesh marketplace MVP modules. The current work also adds trust/safety, SEO/content, payment-service foundations, notifications and analytics for PRD sections 9.9–9.15. The local demos use file-backed or in-memory storage and simulated identities/payments; they are **not a live transactional marketplace**. See [MVP-STATUS.md](MVP-STATUS.md) for the requirement-by-requirement status.
+This repository contains the black-themed CarBuy storefront and Bangladesh marketplace MVP modules. The current work also adds trust/safety, SEO/content, payment-service foundations, notifications and analytics for PRD sections 9.9–9.15. The local demos use file-backed or in-memory storage and simulated identities/payments; they are **not a live transactional marketplace**. See the [full PRD audit](MVP-AUDIT.md) for sections 9.1–9.15 and Appendices A–B, and [MVP-STATUS.md](MVP-STATUS.md) for more detail on sections 9.9–9.15.
 
 | Module | Scope | Guide |
 | --- | --- | --- |
-| `marketplace/` | Toufiq's black-themed Next.js storefront connected to sample inventory, search, detail and guides | [Marketplace README](marketplace/README.md) |
+| `marketplace/` | Black-themed Next.js storefront connected to sample inventory, search, detail and guides | [Marketplace README](marketplace/README.md) |
 | `vehicle-data/` | Bangladesh-focused car catalogue, chassis decoding, validation, bilingual values and admin mapping workflow | [Vehicle data README](vehicle-data/README.md) |
 | `listings/` | Private/dealer listing drafts, photos and papers, pricing, moderation, publishing, expiry and seller workflows | [Listings README](listings/README.md) |
 | `dealers/` | Verified showroom profiles, stock, bulk import, credits, leads, alerts, reporting and mobile portal | [Dealers README](dealers/README.md) |
