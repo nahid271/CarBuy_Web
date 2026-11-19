@@ -60,7 +60,9 @@ export class VehicleDetailHttp {
       if(detailRoute&&req.method==='GET'){
         const result=await this.service.publicDetail(detailRoute[1],locale);
         if(result.kind==='redirect'){res.writeHead(302,{location:result.to,'cache-control':'no-store'});res.end();return true}
-        const html=renderDetail(result.detail,locale,this.publicBase);
+        let html=renderDetail(result.detail,locale,this.publicBase);
+        if(this.demo)html=html.replace('<body>',`<body><div class="demo-banner">${locale==='bn'?'ডেমো প্রিভিউ: এই গাড়ি, বিক্রেতা ও যাচাইয়ের ব্যাজ নমুনা তথ্য।':'DEMO PREVIEW: This car, seller and verification badges are sample data.'}</div>`)
+          .replace('<link rel="stylesheet" href="/detail.css">','<meta name="robots" content="noindex,follow"><link rel="stylesheet" href="/detail.css">');
         res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff',
           'content-security-policy':"default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; base-uri 'self'; frame-ancestors 'none'"});res.end(html);return true}
       if(apiRoute){const id=apiRoute[1],action=apiRoute[2];

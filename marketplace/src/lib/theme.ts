@@ -1,6 +1,6 @@
 /**
  * Runs in <head> before first paint (see layout.tsx): applies the saved theme,
- * or the OS preference when nothing is saved, so dark mode never flashes light.
+ * or the CarBuy dark default when nothing is saved, so dark mode never flashes light.
  * ThemeToggle writes the same "theme" key.
  */
-export const themeScript = `(function(){try{var t=localStorage.getItem("theme");var d=t?t==="dark":matchMedia("(prefers-color-scheme: dark)").matches;document.documentElement.classList.toggle("dark",d)}catch(e){}})()`
+export const themeScript = `(function(){try{var t=localStorage.getItem("theme");document.documentElement.classList.toggle("dark",t?t==="dark":true)}catch(e){document.documentElement.classList.add("dark")}})()`

@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { CatalogService } from '../../vehicle-data/src/catalog.ts';
 import { chassisFormat } from '../../vehicle-data/src/validation.ts';
 import { editableFields, materialFields, soldViaValues, validateForSubmission } from './validation.ts';
-import type { Actor, BillingPort, FeeOrder, Listing, ListingData, ListingPhoto, ListingStore, Paper, Reminder, SoldVia, State, Status, TranslationPort } from './types.ts';
+import type { Actor, BillingPort, FeeOrder, Listing, ListingData, ListingPhoto, ListingStore, Paper, PapersEvidence, Reminder, SoldVia, State, Status, TranslationPort } from './types.ts';
 
 const copy = <T>(value: T): T => structuredClone(value);
 const active = new Set(['pending_payment','pending_review','live']);
@@ -148,7 +148,7 @@ export class ListingService {
     return this.store.transaction(state => {
       const listing = get(state, id); owner(actor, listing);
       if (['sold','removed'].includes(listing.status)) throw new Error('Listing is closed');
-      listing.papers.push(copy(paper)); listing.papersChecked = false;
+      listing.papers.push(copy(paper)); listing.papersChecked = false; listing.papersEvidence=undefined;
       bump(listing, now); audit(state, listing, actor, 'paper_uploaded', now, paper.type); return listing;
     });
   }
@@ -174,13 +174,24 @@ export class ListingService {
       return listing;
     });
   }
-  async checkPapers(actor: Actor, id: string): Promise<Listing> {
+  async checkPapers(actor: Actor, id: string, evidence: PapersEvidence): Promise<Listing> {
     moderator(actor); const now = this.clock();
+    if(!evidence || typeof evidence!=='object' || !evidence.chassisNumber || !evidence.ownerName || !evidence.accountName)
+      throw new Error('Papers evidence with chassis and owner names required');
     return this.store.transaction(state => {
       const listing = get(state, id);
       if (!listing.papers.length) throw new Error('No papers uploaded');
+      const paperChassis=chassisFormat(evidence.chassisNumber),listedChassis=chassisFormat(listing.data.chassisNumber??'');
+      if(!paperChassis.valid || !listedChassis.valid || paperChassis.normalized!==listedChassis.normalized)
+        throw new Error('Chassis number does not match listing');
+      const normalize=(value:string)=>value.normalize('NFKC').replace(/[\s\-]/g,'').toUpperCase();
+      if(listing.data.registrationNumber && normalize(evidence.registrationNumber??'')!==normalize(listing.data.registrationNumber))
+        throw new Error('Registration number does not match listing');
+      const ownerNameMismatch=normalize(evidence.ownerName)!==normalize(evidence.accountName);
+      if(ownerNameMismatch&&!evidence.ownerMismatchReviewed)throw new Error('Owner name mismatch requires explicit review');
       listing.papers.forEach(x => { x.checkedAt = iso(now); x.checkedBy = actor.id; });
-      listing.papersChecked = true; bump(listing, now); audit(state, listing, actor, 'papers_checked', now); return listing;
+      listing.papersChecked = true; listing.papersEvidence={...copy(evidence),checkedAt:iso(now),checkedBy:actor.id,ownerNameMismatch};
+      bump(listing, now); audit(state, listing, actor, 'papers_checked', now, ownerNameMismatch?'owner_name_mismatch_reviewed':'matched'); return listing;
     });
   }
   async beginSubmission(actor: Actor, id: string): Promise<{ listing: Listing; checkout: {url:string;reference:string} }> {

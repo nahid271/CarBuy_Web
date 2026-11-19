@@ -21,8 +21,9 @@ const notoBengali = Noto_Sans_Bengali({
 });
 
 export const metadata: Metadata = {
-  title: "CarBuy — Buy and sell cars in Bangladesh",
-  description: "Verified cars from trusted sellers and showrooms across Bangladesh.",
+  title: "CarBuy — Bangladesh car marketplace preview",
+  description: "Explore a sample CarBuy marketplace for Bangladesh. Cars, sellers and trust badges in this preview are simulated.",
+  robots: { index: false, follow: false },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -1,9 +1,10 @@
 import type { CatalogSnapshot } from '../../vehicle-data/src/types.ts';
+import type { Body } from '../../vehicle-data/src/types.ts';
 import { bodyValues, fuelValues, transmissionValues } from '../../vehicle-data/src/values.ts';
 import type { SearchQuery, SearchSort } from './types.ts';
 import { findDistrict, findDivision } from './locations.ts';
 
-export type SearchRoute={kind:'home'|'search';locale:'en'|'bn';makeId?:string;modelId?:string;district?:string};
+export type SearchRoute={kind:'home'|'search';locale:'en'|'bn';makeId?:string;modelId?:string;district?:string;body?:Body;maxPriceLakh?:number};
 const sortValues=new Set<SearchSort>(['best_match','newest','price_asc','price_desc','mileage_asc','year_desc']);
 const conditions=new Set(['used','reconditioned']);const sellerTypes=new Set(['private','dealer']);
 function num(params:URLSearchParams,key:string,min:number,max:number):number|undefined{
@@ -32,6 +33,17 @@ export function resolveRoute(pathname:string,catalog:CatalogSnapshot):SearchRout
   const locale=parts[0]==='bn'?'bn':'en';if(locale==='bn')parts.shift();
   if(parts[0]!=='cars')return null;
   if(parts.length===1)return {kind:'search',locale};
+  if(parts.length===3&&parts[1]==='make'){
+    const make=catalog.makes.find(x=>x.id===parts[2]&&x.active);
+    return make?{kind:'search',locale,makeId:make.id}:null;
+  }
+  if(parts.length===3&&parts[1]==='body')return parts[2] in bodyValues?{kind:'search',locale,body:parts[2] as Body}:null;
+  if(parts.length===3&&parts[1]==='under'){
+    const budget=Number(parts[2]);return Number.isInteger(budget)&&budget>=5&&budget<=500?{kind:'search',locale,maxPriceLakh:budget}:null;
+  }
+  if(parts.length===3&&parts[1]==='district'){
+    const district=findDistrict(parts[2]);return district?{kind:'search',locale,district:district.id}:null;
+  }
   if(parts.length===2){const district=findDistrict(parts[1]);return district?{kind:'search',locale,district:district.id}:null}
   if(parts.length===3){const make=catalog.makes.find(x=>x.id===parts[1]&&x.active);
     const model=catalog.models.find(x=>x.id===parts[2]&&x.makeId===make?.id&&x.active);
@@ -61,13 +73,13 @@ export function parseSearchQuery(params:URLSearchParams,route:SearchRoute,catalo
   const q:SearchQuery={locale:route.locale,sort:sort??'best_match',page,
     keyword:text(params,'q',120),condition:choice(params,'condition',conditions) as SearchQuery['condition'],
     makeId,modelIds:modelIds.length?modelIds:undefined,gradeId,
-    minPriceLakh:num(params,'priceMin',0,100000),maxPriceLakh:num(params,'priceMax',0,100000),
+    minPriceLakh:num(params,'priceMin',0,100000),maxPriceLakh:route.maxPriceLakh??num(params,'priceMax',0,100000),
     minYear:num(params,'yearMin',1950,currentYear+1),maxYear:num(params,'yearMax',1950,currentYear+1),
     minRegistrationYear:num(params,'regMin',1950,currentYear+1),maxRegistrationYear:num(params,'regMax',1950,currentYear+1),
     minMileageKm:num(params,'mileageMin',0,2000000),maxMileageKm:num(params,'mileageMax',0,2000000),
     minEngineCc:num(params,'ccMin',1,20000),maxEngineCc:num(params,'ccMax',1,20000),
     fuel:choice(params,'fuel',new Set(Object.keys(fuelValues))) as SearchQuery['fuel'],
-    body:choice(params,'body',new Set(Object.keys(bodyValues))) as SearchQuery['body'],
+    body:route.body??choice(params,'body',new Set(Object.keys(bodyValues))) as SearchQuery['body'],
     transmission:choice(params,'transmission',new Set(Object.keys(transmissionValues))) as SearchQuery['transmission'],
     colour:text(params,'colour',60),sellerType:choice(params,'seller',sellerTypes) as SearchQuery['sellerType'],
     division,district,area,

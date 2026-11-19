@@ -11,6 +11,7 @@ import { LocalMediaStore, preparePaper, preparePhoto } from './media.ts';
 import { formatBdt, parseBdt } from './price.ts';
 import { validateForSubmission } from './validation.ts';
 import type { Actor, BillingPort, FeeOrder, Listing } from './types.ts';
+import { assessListingRisk } from './risk.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const seller: Actor = { id: 'demo-seller', role: 'seller', phoneVerified: true, sellerType: 'private' };
@@ -45,6 +46,10 @@ createServer(async (req,res) => {
     if (req.method==='GET' && path==='/api/decode') {json(res,200,await catalog.decode(url.searchParams.get('value')??''));return;}
     if (req.method==='POST' && path==='/api/catalog-request') {const b=await body(req);json(res,200,await catalog.submitUnknown(b.kind,b.text,b.context));return;}
     if (req.method==='GET' && path==='/api/mine') {json(res,200,await service.myListings(seller));return;}
+    if (req.method==='GET' && path==='/api/demo/moderation-queue') {
+      const state=await store.read();json(res,200,state.listings.filter(x=>x.status==='pending_review').map(x=>({id:x.id,submittedAt:x.submittedAt,
+        sellerType:x.sellerType,priceBdt:x.data.priceBdt,risks:assessListingRisk(x,state.listings).signals})));return;
+    }
     if (req.method==='POST' && path==='/api/listings') {json(res,201,await service.createDraft(seller));return;}
     const match=/^\/api\/listings\/([a-f0-9-]+)(?:\/(.+))?$/.exec(path);
     if (match) {
@@ -81,7 +86,7 @@ createServer(async (req,res) => {
       if(req.method==='POST' && action==='demo-request-changes') {const b=await body(req);json(res,200,await service.requestChanges(moderator,id,b.note??'Please retake the photos in daylight'));return;}
       if(req.method==='POST' && action==='demo-reject') {const b=await body(req);json(res,200,await service.reject(moderator,id,b.note??'Please review the details'));return;}
       if(req.method==='POST' && action==='demo-remove') {const b=await body(req);json(res,200,await service.remove(moderator,id,b.note??'Removed by moderator'));return;}
-      if(req.method==='POST' && action==='demo-check-papers') {json(res,200,await service.checkPapers(moderator,id));return;}
+      if(req.method==='POST' && action==='demo-check-papers') {const b=await body(req);json(res,200,await service.checkPapers(moderator,id,b.evidence));return;}
       if(req.method==='POST' && action==='demo-verify-auction-sheet') {const b=await body(req);json(res,200,await service.verifyAuctionSheet(moderator,id,String(b.grade??''),Number(b.mileageKm)));return;}
       if(req.method==='POST' && action==='edit-live') {const b=await body(req);json(res,200,await service.editLive(seller,id,b.patch));return;}
       if(req.method==='POST' && action==='sold') {const b=await body(req);json(res,200,await service.markSold(seller,id,b.soldVia));return;}

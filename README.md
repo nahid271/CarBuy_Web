@@ -1,10 +1,10 @@
 # CarBuy MVP modules
 
-This repository contains CarBuy Bangladesh marketplace MVP modules for PRD sections **9.2 Vehicle Data**, **9.3 Listings**, **9.4 Dealers**, **9.5 Search & Discovery**, **9.6 Vehicle Detail Page**, **9.7 Messaging & Leads**, and **9.8 Saved Cars & Alerts**. Each module has its own README, tests, and PostgreSQL target schema. The local demos use file-backed storage and simulated identities/payments; production integration requirements are documented in each module.
+This repository contains Toufiq's black-themed CarBuy storefront and the Bangladesh marketplace MVP modules. The current work also adds trust/safety, SEO/content, payment-service foundations, notifications and analytics for PRD sections 9.9–9.15. The local demos use file-backed or in-memory storage and simulated identities/payments; they are **not a live transactional marketplace**. See [MVP-STATUS.md](MVP-STATUS.md) for the requirement-by-requirement status.
 
 | Module | Scope | Guide |
 | --- | --- | --- |
-| `marketplace/` | Buyer-facing storefront (Next.js, Tailwind CSS, shadcn/ui, Motion, Lenis) with a monotone theme | `cd marketplace && npm install && npm run dev` |
+| `marketplace/` | Toufiq's black-themed Next.js storefront connected to sample inventory, search, detail and guides | [Marketplace README](marketplace/README.md) |
 | `vehicle-data/` | Bangladesh-focused car catalogue, chassis decoding, validation, bilingual values and admin mapping workflow | [Vehicle data README](vehicle-data/README.md) |
 | `listings/` | Private/dealer listing drafts, photos and papers, pricing, moderation, publishing, expiry and seller workflows | [Listings README](listings/README.md) |
 | `dealers/` | Verified showroom profiles, stock, bulk import, credits, leads, alerts, reporting and mobile portal | [Dealers README](dealers/README.md) |
@@ -12,6 +12,11 @@ This repository contains CarBuy Bangladesh marketplace MVP modules for PRD secti
 | `vehicle-detail/` | Bilingual car pages, gallery, trust checks, protected contacts, reports and auction verification requests | [Vehicle detail README](vehicle-detail/README.md) |
 | `messaging/` | Per-car chat, live buyer/seller inboxes, lead events, scam screening, private images and notification outbox | [Messaging README](messaging/README.md) |
 | `saved-alerts/` | Account saved cars, live price/status changes, saved-search notification outbox and synced recent views | [Saved alerts README](saved-alerts/README.md) |
+| `platform/` | Prototype payment, notification and consent-gated analytics services | [MVP status](MVP-STATUS.md) |
+
+## Run the black-themed preview
+
+With Node.js 22.18+ and two terminals, run `cd search && npm ci && npm run demo` in the first. Run `cd marketplace && npm ci && CARBUY_API_URL=http://127.0.0.1:4175 npm run dev -- --hostname 127.0.0.1 --port 3001` in the second. Open <http://127.0.0.1:3001/>. The server at port 4175 supplies sample inventory to the black storefront.
 
 ## Run the dealer portal
 

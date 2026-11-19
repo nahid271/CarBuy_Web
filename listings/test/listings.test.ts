@@ -9,7 +9,8 @@ import { MemoryCatalogStore } from '../../vehicle-data/src/store.ts';
 import { ListingService, staleCheckoutMs } from '../src/service.ts';
 import { MemoryListingStore } from '../src/store.ts';
 import { formatBdt, parseBdt } from '../src/price.ts';
-import { LocalMediaStore, preparePaper, preparePhoto } from '../src/media.ts';
+import { LocalMediaStore, perceptualHash, preparePaper, preparePhoto } from '../src/media.ts';
+import { assessListingRisk, hashDistance } from '../src/risk.ts';
 import type { Actor, BillingPort, Listing, ListingData, ListingPhoto } from '../src/types.ts';
 
 const seller:Actor={id:'seller-1',role:'seller',phoneVerified:true,sellerType:'private'};
@@ -60,6 +61,8 @@ test('LST-05/06/17: photos become metadata-free WebP/AVIF; papers remain moderat
   assert.equal((await sharp(result.webp).metadata()).format,'webp');
   assert.equal((await sharp(result.avif).metadata()).format,'heif');
   assert.equal((await sharp(result.webp).metadata()).exif,undefined);
+  assert.match(result.photo.perceptualHash??'',/^[a-f0-9]{16}$/);
+  assert.equal(await perceptualHash(source),result.photo.perceptualHash);
   const temp=await mkdtemp(join(tmpdir(),'carbuy-media-'));
   try{
     const media=new LocalMediaStore(temp);
@@ -68,6 +71,35 @@ test('LST-05/06/17: photos become metadata-free WebP/AVIF; papers remain moderat
     await assert.rejects(media.readPrivate(seller,key),/Moderator required/);
     assert.equal((await media.readPrivate(moderator,key)).toString().startsWith('%PDF-'),true);
   }finally{await rm(temp,{recursive:true,force:true})}
+});
+
+test('TNS-02/03: review risk signals and opt-in low-risk auto-publish gate',async()=>{
+  const service=new ListingService(new MemoryListingStore(),new CatalogService(new MemoryCatalogStore()),billing);
+  const first=await prepared(service,seller,501);
+  const safe=assessListingRisk(first,[first],{accountCreatedAt:'2025-01-01T00:00:00Z',now:new Date('2026-10-17T00:00:00Z'),lowRiskAutoPublish:true});
+  assert.equal(safe.autoPublish,true);
+  assert.equal(assessListingRisk(first,[first],{accountCreatedAt:'2025-01-01T00:00:00Z',now:new Date('2026-10-17T00:00:00Z')}).requiresReview,true);
+  const copy={...first,id:'copy',data:{...first.data,description:'Call +8801712345678',priceBdt:100000},photos:[{...first.photos[0],sha256:'other',perceptualHash:'ffffffffffffffff'}]};
+  const comparables=[1,2,3].map(i=>({...first,id:`compare-${i}`,sellerId:`other-${i}`,photos:[],data:{...first.data,chassisNumber:`NHP10-999999${i}`,priceBdt:2800000},status:'live' as const}));
+  first.photos[0].perceptualHash='fffffffffffffffe';
+  const result=assessListingRisk(copy,[first,...comparables],{accountCreatedAt:'2025-01-01T00:00:00Z',now:new Date('2026-10-17T00:00:00Z'),lowRiskAutoPublish:true});
+  assert.deepEqual(result.signals.map(x=>x.code).sort(),['contact_in_text','duplicate_chassis','duplicate_photo','low_price'].sort());
+  assert.equal(result.autoPublish,false);assert.equal(hashDistance('ffffffffffffffff','fffffffffffffffe'),1);
+});
+
+test('TNS-05: papers badge requires matching chassis and registration evidence',async()=>{
+  const service=new ListingService(new MemoryListingStore(),new CatalogService(new MemoryCatalogStore()),billing);
+  let row=await prepared(service,seller,502);
+  row=await service.saveDraft(seller,row.id,{registrationNumber:'DHA-12-3456'});
+  row=await service.addPaper(seller,row.id,{id:'paper-1',type:'registration',privateKey:'private.pdf',uploadedAt:new Date().toISOString()});
+  const evidence={chassisNumber:row.data.chassisNumber!,registrationNumber:'DHA-12-3456',ownerName:'Rahim Ahmed',accountName:'Rahim Ahmed'};
+  await assert.rejects(service.checkPapers(moderator,row.id,{...evidence,chassisNumber:'NHP10-0000001'}),/Chassis number/);
+  await assert.rejects(service.checkPapers(moderator,row.id,{...evidence,registrationNumber:'OTHER'}),/Registration number/);
+  await assert.rejects(service.checkPapers(moderator,row.id,{...evidence,ownerName:'Different Name'}),/Owner name mismatch/);
+  row=await service.checkPapers(moderator,row.id,evidence);
+  assert.equal(row.papersChecked,true);assert.equal(row.papersEvidence?.checkedBy,moderator.id);
+  row=await service.addPaper(seller,row.id,{id:'paper-2',type:'tax_token',privateKey:'other.pdf',uploadedAt:new Date().toISOString()});
+  assert.equal(row.papersChecked,false);assert.equal(row.papersEvidence,undefined);
 });
 
 test('moderator verifies auction grade and mileage only after a sheet exists',async()=>{

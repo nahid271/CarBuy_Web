@@ -6,6 +6,7 @@ import { parseSearchQuery, resolveRoute } from '../src/query.ts';
 import { districts, divisions } from '../src/locations.ts';
 import type { Promotion, SearchQuery } from '../src/types.ts';
 import { JsonPromotionPort } from '../src/promotions.ts';
+import { contentPages, renderContent } from '../src/content.ts';
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -22,6 +23,24 @@ test('district catalogue covers Bangladesh and bilingual district routes',async(
   assert.deepEqual(resolveRoute('/cars/dhaka',catalog),{kind:'search',locale:'en',district:'dhaka'});
   assert.deepEqual(resolveRoute('/bn/cars/toyota/axio',catalog),{kind:'search',locale:'bn',makeId:'toyota',modelId:'axio'});
   assert.equal(resolveRoute('/cars/unknown',catalog),null);
+  assert.deepEqual(resolveRoute('/cars/make/toyota',catalog),{kind:'search',locale:'en',makeId:'toyota'});
+  assert.deepEqual(resolveRoute('/bn/cars/body/suv',catalog),{kind:'search',locale:'bn',body:'suv'});
+  assert.deepEqual(resolveRoute('/cars/under/20',catalog),{kind:'search',locale:'en',maxPriceLakh:20});
+  assert.deepEqual(resolveRoute('/cars/district/sylhet',catalog),{kind:'search',locale:'en',district:'sylhet'});
+  assert.equal(resolveRoute('/cars/under/0',catalog),null);
+  assert.equal(parseSearchQuery(new URLSearchParams(),resolveRoute('/cars/under/20',catalog)!,catalog).maxPriceLakh,20);
+});
+
+test('SEO-04: all eleven guidance pages render in Bangla and English, drafts stay out of index',()=>{
+  assert.equal(Object.keys(contentPages).length,11);
+  for(const slug of Object.keys(contentPages)){
+    const en=renderContent(`/${slug}`,'https://carbuy.example')!,bn=renderContent(`/bn/${slug}`,'https://carbuy.example')!;
+    assert.match(en,/lang="en"/);assert.match(bn,/lang="bn"/);
+    assert.match(en,/hreflang="bn"/);assert.match(bn,/hreflang="en"/);
+    assert.match(en,new RegExp(`https://carbuy.example/${slug}`));
+  }
+  assert.match(renderContent('/terms','https://carbuy.example')!,/noindex,follow/);
+  assert.equal(renderContent('/not-a-page','https://carbuy.example'),null);
 });
 
 test('parses full validated URL state and rejects invalid ranges/location',async()=>{

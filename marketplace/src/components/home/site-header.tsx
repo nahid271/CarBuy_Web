@@ -20,12 +20,11 @@ import { cn } from "@/lib/utils"
 
 import { Container } from "./section"
 
-// These routes aren't built yet, so links opt out of prefetching.
 const nav = [
   { href: "/cars", label: "Buy" },
-  { href: "/sell", label: "Sell" },
-  { href: "/showrooms", label: "Showrooms" },
-  { href: "/financing", label: "Financing" },
+  { href: "/sell-your-car", label: "Sell" },
+  { href: "/dealer-sign-up", label: "Dealers" },
+  { href: "/safety", label: "Safety" },
 ]
 
 export function Wordmark({ className }: { className?: string }) {
@@ -78,11 +77,8 @@ export function SiteHeader() {
 
         <div className="ml-auto flex items-center gap-1.5">
           <ThemeToggle />
-          <Button variant="ghost" className="hidden h-9 rounded-full px-4 sm:inline-flex">
-            Sign in
-          </Button>
           <Link
-            href="/sell"
+            href="/sell-your-car"
             prefetch={false}
             className={cn(buttonVariants(), "hidden h-9 rounded-full px-4 sm:inline-flex")}
           >
@@ -125,16 +121,13 @@ export function SiteHeader() {
               </nav>
               <SheetFooter className="gap-3 px-6 pb-8">
                 <Link
-                  href="/sell"
+                  href="/sell-your-car"
                   prefetch={false}
                   onClick={() => setMenuOpen(false)}
                   className={cn(buttonVariants(), "h-12 rounded-full text-base")}
                 >
                   Sell your car
                 </Link>
-                <Button variant="outline" className="h-12 rounded-full text-base">
-                  Sign in
-                </Button>
               </SheetFooter>
             </SheetContent>
           </Sheet>

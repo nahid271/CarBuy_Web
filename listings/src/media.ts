@@ -18,6 +18,14 @@ async function blurHint(bytes: Buffer): Promise<boolean> {
   const variance=values.reduce((a,b)=>a+(b-mean)**2,0)/values.length;
   return variance<18;
 }
+export async function perceptualHash(bytes: Buffer): Promise<string> {
+  const pixels=await sharp(bytes).rotate().resize(9,8,{fit:'fill'}).greyscale().raw().toBuffer();
+  let bits=0n;
+  for(let y=0;y<8;y++)for(let x=0;x<8;x++){
+    bits=(bits<<1n)|(pixels[y*9+x]>pixels[y*9+x+1]?1n:0n);
+  }
+  return bits.toString(16).padStart(16,'0');
+}
 
 export async function preparePhoto(bytes: Buffer): Promise<{ photo: ListingPhoto; webp: Buffer; avif: Buffer }> {
   checkSize(bytes, maxImageBytes);
@@ -26,17 +34,18 @@ export async function preparePhoto(bytes: Buffer): Promise<{ photo: ListingPhoto
   if (!metadata.format || !rasterFormats.has(metadata.format) || !metadata.width || !metadata.height) throw new Error('Use a raster photo');
   if (metadata.width < 600 || metadata.height < 400) throw new Error('Photo is too small');
   const normalized = await sharp(bytes, { limitInputPixels: 40_000_000 }).rotate().resize({ width: 1800, height: 1800, fit: 'inside', withoutEnlargement: true }).toBuffer();
-  const [webp, avif, stats, blurry] = await Promise.all([
+  const [webp, avif, stats, blurry, visualHash] = await Promise.all([
     sharp(normalized).webp({ quality: 78 }).toBuffer(),
     sharp(normalized).avif({ quality: 48, effort: 2 }).toBuffer(),
     sharp(normalized).stats(),
     blurHint(normalized),
+    perceptualHash(normalized),
   ]);
   const hints: string[] = [];
   if (stats.channels.slice(0, 3).reduce((sum, channel) => sum + channel.mean, 0) / Math.min(stats.channels.length, 3) < 48) hints.push('dark');
   if (blurry) hints.push('blurry');
   const output = await sharp(webp).metadata();
-  return { photo: { id: randomUUID(), position: 0, webpKey: '', avifKey: '', sha256: createHash('sha256').update(webp).digest('hex'), width: output.width!, height: output.height!, hints }, webp, avif };
+  return { photo: { id: randomUUID(), position: 0, webpKey: '', avifKey: '', sha256: createHash('sha256').update(webp).digest('hex'), perceptualHash: visualHash, width: output.width!, height: output.height!, hints }, webp, avif };
 }
 
 export async function preparePaper(bytes: Buffer, type: PaperType): Promise<{ paper: Paper; bytes: Buffer; extension: string }> {

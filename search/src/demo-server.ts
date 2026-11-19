@@ -21,6 +21,7 @@ import { MemoryMessagingStore, JsonMessagingStore } from '../../messaging/src/st
 import { MessagingService } from '../../messaging/src/service.ts';
 import { MessagingHttp } from '../../messaging/src/http.ts';
 import { LocalChatImages } from '../../messaging/src/attachments.ts';
+import { contentPages, renderContent } from './content.ts';
 import { MemorySavedStore, JsonSavedStore } from '../../saved-alerts/src/store.ts';
 import { SavedService } from '../../saved-alerts/src/service.ts';
 import { SavedHttp } from '../../saved-alerts/src/http.ts';
@@ -73,17 +74,25 @@ async function page(res:ServerResponse,path:string,search:string){
   if(!route){res.writeHead(404);res.end('Not found');return}
   const q=parseSearchQuery(new URLSearchParams(search),route,snapshot);
   const data=route.kind==='home'?await service.home(route.locale):await service.search(q);
+  const model=route.modelId?snapshot.models.find(x=>x.id===route.modelId):undefined;
+  const make=route.makeId?snapshot.makes.find(x=>x.id===route.makeId):undefined;
+  const subject=route.modelId?`${make?.name[route.locale]} ${model?.name[route.locale]}`:
+    route.makeId?make?.name[route.locale]:route.body?route.body:route.maxPriceLakh?localeText(route.locale,`under ${route.maxPriceLakh} lakh`,`৳${route.maxPriceLakh} লাখের নিচে`):
+    route.district?route.district:undefined;
   const title=route.kind==='home'?localeText(route.locale,'Buy and sell cars in Bangladesh | CarBuy','বাংলাদেশে গাড়ি কেনাবেচা | CarBuy'):
-    `${route.modelId?`${snapshot.models.find(x=>x.id===route.modelId)?.name[route.locale]} `:''}${localeText(route.locale,'Cars for sale','বিক্রির জন্য গাড়ি')}${route.district?` · ${route.district}`:''} | CarBuy`;
+    `${subject?`${subject} · `:''}${localeText(route.locale,'Cars for sale in Bangladesh','বাংলাদেশে বিক্রির জন্য গাড়ি')} | CarBuy`;
   const description=localeText(route.locale,'Search cars by model, budget, location and verified trust signals across Bangladesh.','বাংলাদেশজুড়ে মডেল, বাজেট, এলাকা ও যাচাইকৃত তথ্য দিয়ে গাড়ি খুঁজুন।');
   const base=(process.env.PUBLIC_BASE_URL??`http://127.0.0.1:${port}`).replace(/\/$/,'');
-  const canonical=`${base}${path}${search}`;
+  const canonical=`${base}${path}`;
   const englishPath=route.locale==='bn'?path.replace(/^\/bn/,'')||'/':path;
   const bengaliPath=route.locale==='bn'?path:path==='/'?'/bn':`/bn${path}`;
   const results=route.kind==='home'?(data as Awaited<ReturnType<typeof service.home>>).newListings:(data as SearchResult).cards;
   let html=await readFile(join(root,'web','index.html'),'utf8');
+  const indexable=real&&!search&&(route.kind==='home'||(data as SearchResult).total>=3);
   html=html.replaceAll('__LANG__',route.locale).replace('__TITLE__',escape(title)).replace('__DESCRIPTION__',escape(description))
-    .replace('__CANONICAL__',escape(canonical)).replace('__ENGLISH__',escape(`${base}${englishPath}${search}`)).replace('__BENGALI__',escape(`${base}${bengaliPath}${search}`))
+    .replace('__DEMO_BANNER__',real?'':`<div class="demo-banner">${route.locale==='bn'?'ডেমো প্রিভিউ: সব গাড়ি, বিক্রেতা, দাম ও যাচাইয়ের ব্যাজ নমুনা তথ্য। এখানে আসল লেনদেন করবেন না।':'DEMO PREVIEW: All cars, sellers, prices and verification badges are sample data. No real transactions.'}</div>`)
+    .replace('__ROBOTS__',indexable?'':'<meta name="robots" content="noindex,follow">')
+    .replace('__CANONICAL__',escape(canonical)).replace('__ENGLISH__',escape(`${base}${englishPath}`)).replace('__BENGALI__',escape(`${base}${bengaliPath}`))
     .replace('__SSR_CARDS__',results.map(x=>cardHtml(x,route.locale)).join(''))
     .replace('__BOOTSTRAP__',JSON.stringify({route,data,query:q,real}).replace(/</g,'\\u003c'));
   res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff',
@@ -102,6 +111,28 @@ createServer(async(req,res)=>{
     if(await messagingHttp.handle(req,res,url))return;
     if(await savedHttp.handle(req,res,url))return;
     if(req.method!=='GET'){json(res,405,{error:'Method not allowed'});return}
+    const publicBase=(process.env.PUBLIC_BASE_URL??`http://127.0.0.1:${port}`).replace(/\/$/,'');
+    const guidance=renderContent(path,publicBase);
+    if(guidance){res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'public,max-age=3600','x-content-type-options':'nosniff',
+      'content-security-policy':"default-src 'none'; style-src 'unsafe-inline'; base-uri 'self'; frame-ancestors 'none'"});res.end(real?guidance:guidance.replace('<head>','<head><meta name="robots" content="noindex,follow">'));return}
+    if(path==='/robots.txt'){res.writeHead(200,{'content-type':'text/plain; charset=utf-8'});
+      res.end(real?`User-agent: *\nDisallow: /api/\nDisallow: /saved\nDisallow: /bn/saved\nSitemap: ${publicBase}/sitemap.xml\n`:'User-agent: *\nDisallow: /\n');return}
+    if(path==='/sitemap.xml'){
+      const state=await listings.read(),snapshot=await catalog.snapshot(),now=Date.now();
+      const live=state.listings.filter(x=>x.status==='live'&&x.expiresAt&&Date.parse(x.expiresAt)>now);
+      const count=(key:(row:typeof live[number])=>string)=>{const counts=new Map<string,number>();for(const row of live){const value=key(row);counts.set(value,(counts.get(value)??0)+1)}return counts};
+      const modelCounts=count(x=>x.data.modelId??''),makeCounts=count(x=>x.data.makeId??''),bodyCounts=count(x=>x.data.body??''),districtCounts=count(x=>(x.data.district??'').toLowerCase());
+      const paths=['/','/cars',...Object.keys(contentPages).filter(x=>!['terms','privacy','contact'].includes(x)).map(x=>`/${x}`),
+        ...live.map(x=>`/car/${encodeURIComponent(x.id)}`),
+        ...snapshot.models.filter(x=>x.active&&(modelCounts.get(x.id)??0)>=3).map(x=>`/cars/${encodeURIComponent(x.makeId)}/${encodeURIComponent(x.id)}`),
+        ...snapshot.makes.filter(x=>x.active&&(makeCounts.get(x.id)??0)>=3).map(x=>`/cars/make/${encodeURIComponent(x.id)}`),
+        ...Object.keys(bodyValues).filter(x=>(bodyCounts.get(x)??0)>=3).map(x=>`/cars/body/${x}`),
+        ...districts.filter(x=>(districtCounts.get(x.id.toLowerCase())??0)>=3).map(x=>`/cars/district/${encodeURIComponent(x.id)}`),
+        ...[10,20,30,40,50].filter(b=>live.filter(x=>(x.data.priceBdt??Infinity)<=b*100000).length>=3).map(b=>`/cars/under/${b}`)];
+      const xml=`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">${paths.flatMap(p=>[p,p==='/'?'/bn':`/bn${p}`]).map(p=>{
+        const plain=p.replace(/^\/bn/,'')||'/',english=plain,bangla=plain==='/'?'/bn':`/bn${plain}`;
+        return `<url><loc>${escape(publicBase+p)}</loc><xhtml:link rel="alternate" hreflang="en" href="${escape(publicBase+english)}"/><xhtml:link rel="alternate" hreflang="bn" href="${escape(publicBase+bangla)}"/></url>`}).join('')}</urlset>`;
+      res.writeHead(200,{'content-type':'application/xml; charset=utf-8','cache-control':'public,max-age=3600'});res.end(xml);return}
     if(path==='/sell'){
       const body='<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sell a car | CarBuy</title><link rel="stylesheet" href="/styles.css"><body><header class="site-header"><a class="brand" href="/">carbuy<span>.</span></a><a class="top-link" href="/">← Back to search</a></header><main class="seller-handoff"><p class="eyebrow">SELL ON CARBUY</p><h1>Create your listing</h1><p>The private seller listing flow is provided by the 9.3 Listings module. Start its local demo with <code>cd listings && npm run demo</code>, then open the seller studio.</p><a class="primary-button" href="http://127.0.0.1:4173/">Open seller studio ↗</a></main></body></html>';
       res.writeHead(200,{'content-type':'text/html; charset=utf-8','content-security-policy':"default-src 'self'; style-src 'self'; base-uri 'self'"});res.end(body);return}

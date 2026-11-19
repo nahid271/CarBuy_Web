@@ -14,9 +14,10 @@ export type ListingData = {
   auctionGrade?: string; owners?: number; featureIds?: string[]; description?: string;
   stockNumber?: string; stockStatus?: 'ready' | 'preorder'; expectedArrival?: string; afterSalesNotes?: string;
 };
-export type ListingPhoto = { id: string; position: number; webpKey: string; avifKey: string; sha256: string; width: number; height: number; hints: string[] };
+export type ListingPhoto = { id: string; position: number; webpKey: string; avifKey: string; sha256: string; perceptualHash?: string; width: number; height: number; hints: string[] };
 export type PaperType = 'registration' | 'smart_card' | 'tax_token' | 'fitness';
 export type Paper = { id: string; type: PaperType; privateKey: string; uploadedAt: string; checkedAt?: string; checkedBy?: string };
+export type PapersEvidence = { chassisNumber: string; registrationNumber?: string; ownerName: string; accountName: string; ownerMismatchReviewed?: boolean };
 export type AuctionSheet = { privateKey: string; displayKey: string; status: 'seller_provided_unverified' | 'verification_ordered' | 'verified'; grade?: string; mileageKm?: number };
 export type Metrics = { impressions: number; views: number; chat: number; call: number; whatsapp: number; saves: number };
 export type PriceChange = { priceBdt: number; at: string; actorId: string };
@@ -26,7 +27,7 @@ export type Vehicle = { id: string; chassisNormalized: string; listingIds: strin
 export type Listing = {
   id: string; vehicleId?: string; sellerId: string; sellerType: SellerType; status: Status; version: number;
   data: Partial<ListingData>; photos: ListingPhoto[]; papers: Paper[]; auctionSheet?: AuctionSheet;
-  papersChecked: boolean; metrics: Metrics; priceHistory: PriceChange[]; feeOrders: FeeOrder[];
+  papersChecked: boolean; papersEvidence?: PapersEvidence & { checkedAt: string; checkedBy: string; ownerNameMismatch: boolean }; metrics: Metrics; priceHistory: PriceChange[]; feeOrders: FeeOrder[];
   createdAt: string; updatedAt: string; submittedAt?: string; publishedAt?: string; expiresAt?: string;
   closedAt?: string; soldVia?: SoldVia; moderationNote?: string; reminderDaysSent: number[];
 };

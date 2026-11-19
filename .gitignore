@@ -1,5 +1,6 @@
 .DS_Store
 **/node_modules/
+platform/node_modules
 **/.local/
 *.zip
 .document-work/
