@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { ArrowUpRightIcon, MessageCircleIcon, PhoneIcon } from "lucide-react"
+import { BookOpenIcon, ShieldCheckIcon } from "lucide-react"
 
 import { buttonVariants } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -15,38 +15,36 @@ const columns: { title: string; links: { label: string; href: string }[] }[] = [
       { label: "Reconditioned", href: "/cars?condition=reconditioned" },
       { label: "Used", href: "/cars?condition=used" },
       { label: "Hybrids", href: "/cars?fuel=hybrid" },
-      { label: "Showrooms", href: "/showrooms" },
+      { label: "Dealer guide", href: "/dealer-sign-up" },
     ],
   },
   {
     title: "Sell",
     links: [
-      { label: "Sell your car", href: "/sell" },
-      { label: "Free valuation", href: "/sell#valuation" },
-      { label: "For showrooms", href: "/dealers" },
+      { label: "Sell your car", href: "/sell-your-car" },
+      { label: "How it works", href: "/how-it-works" },
+      { label: "For showrooms", href: "/dealer-sign-up" },
     ],
   },
   {
     title: "Help",
     links: [
-      { label: "Financing", href: "/financing" },
-      { label: "Inspection report", href: "/inspection" },
-      { label: "Ownership transfer", href: "/help/transfer" },
-      { label: "Safety tips", href: "/help/safety" },
+      { label: "Help centre", href: "/help" },
+      { label: "Auction sheets", href: "/auction-sheets" },
+      { label: "Ownership transfer", href: "/safety" },
+      { label: "Safety tips", href: "/safety" },
     ],
   },
   {
     title: "Company",
     links: [
       { label: "About", href: "/about" },
-      { label: "Careers", href: "/careers" },
-      { label: "Press", href: "/press" },
       { label: "Contact", href: "/contact" },
+      { label: "Listing rules", href: "/listing-rules" },
+      { label: "Privacy draft", href: "/privacy" },
     ],
   },
 ]
-
-const social = ["Facebook", "Instagram", "YouTube", "LinkedIn"]
 
 export function SiteFooter() {
   return (
@@ -59,29 +57,28 @@ export function SiteFooter() {
               Not sure which car is right?
             </p>
             <p className="mt-2 text-muted-foreground">
-              Our advisors are on call 10am – 10pm, seven days a week, in English and বাংলা.
+              Use the buying guide and compare each car’s documents before you contact a seller.
             </p>
           </div>
-          {/* No real hotline or WhatsApp number exists yet, so both go to /contact. */}
           <div className="flex flex-wrap gap-3">
             <Link
-              href="/contact?via=call"
+              href="/safety"
               prefetch={false}
               className={cn(buttonVariants(), "h-12 gap-2 rounded-full px-6 text-[0.95rem]")}
             >
-              <PhoneIcon />
-              Call an advisor
+              <ShieldCheckIcon />
+              Buying safety
             </Link>
             <Link
-              href="/contact?via=whatsapp"
+              href="/help"
               prefetch={false}
               className={cn(
                 buttonVariants({ variant: "outline" }),
                 "h-12 gap-2 rounded-full px-6 text-[0.95rem]"
               )}
             >
-              <MessageCircleIcon />
-              WhatsApp
+              <BookOpenIcon />
+              Help centre
             </Link>
           </div>
         </Reveal>
@@ -89,11 +86,10 @@ export function SiteFooter() {
         <div className="grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-12">
           <div className="lg:col-span-4">
             <p className="max-w-xs leading-relaxed text-muted-foreground">
-              CarBuy is Bangladesh&apos;s marketplace for verified used and reconditioned
-              cars. Every listing papers-checked, every showroom visited.
+              CarBuy is a Bangladesh-focused marketplace preview. Cars, sellers and check badges shown here are sample data.
             </p>
             <p className="mt-6 text-sm text-muted-foreground">
-              Tejgaon, Dhaka · Agrabad, Chattogram · Zindabazar, Sylhet
+              Inspect the vehicle and original documents yourself before paying anyone.
             </p>
           </div>
           <nav aria-label="Footer" className="grid grid-cols-2 gap-8 sm:col-span-2 sm:grid-cols-4 lg:col-span-8">
@@ -130,24 +126,8 @@ export function SiteFooter() {
 
       <div className="border-t">
         <Container className="flex flex-col gap-4 py-6 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <p>© 2026 CarBuy. Made in Dhaka.</p>
-          <ul className="flex flex-wrap gap-x-5 gap-y-2">
-            {social.map((name) => (
-              <li key={name}>
-                <a href="#" className="inline-flex items-center gap-1 hover:text-foreground">
-                  {name}
-                  <ArrowUpRightIcon className="size-3" />
-                </a>
-              </li>
-            ))}
-          </ul>
-          <p className="flex gap-3">
-            <span className="text-foreground">English</span>
-            <span aria-hidden>/</span>
-            <a href="#" lang="bn" className="hover:text-foreground">
-              বাংলা
-            </a>
-          </p>
+          <p>© 2026 CarBuy · Product preview</p>
+          <p>Bangla and English guidance is being integrated into this storefront.</p>
         </Container>
       </div>
     </footer>

@@ -17,41 +17,41 @@ import { Container, SectionHeading } from "./section"
 const pillars: { icon: LucideIcon; title: string; body: string }[] = [
   {
     icon: FileCheck2Icon,
-    title: "Papers verified",
-    body: "Registration, tax token, fitness and insurance matched against BRTA records, and the seller's NID matched against the papers.",
+    title: "Papers comparison",
+    body: "The review workflow compares uploaded chassis and registration details with the listing and flags owner-name mismatches for a human decision.",
   },
   {
     icon: ClipboardCheckIcon,
-    title: "150-point inspection",
-    body: "Engine, gearbox, hybrid battery health, chassis and flood checks by CarBuy engineers. The full report sits on every listing.",
+    title: "Suspicious listing signals",
+    body: "Moderators can see duplicate chassis or photos, unusual prices, contact details in descriptions and sudden posting activity.",
   },
   {
     icon: StoreIcon,
-    title: "Verified showrooms",
-    body: "Trade licence, address and track record checked in person. Showrooms that mislead buyers lose their badge.",
+    title: "Dealer review",
+    body: "A dealer application records trade-licence details and supports a manual visit or video check before a badge is approved.",
   },
   {
     icon: ScaleIcon,
-    title: "Fair price guide",
-    body: "Every asking price is compared with recent sales of the same model, year and grade, so you know where it sits.",
+    title: "Price context",
+    body: "Compare asking prices for a model, year and location. The prototype does not claim to know a final sale price.",
   },
   {
     icon: LandmarkIcon,
-    title: "Financing, pre-approved",
-    body: "Car loans from partner banks, an indicative EMI on every listing, and approval in as little as three working days.",
+    title: "Buyer privacy",
+    body: "Contact details stay out of public listing data. The demo requires a verified buyer identity before a contact reveal.",
   },
   {
     icon: KeyRoundIcon,
-    title: "Ownership transfer handled",
-    body: "We walk you through the BRTA name transfer and hold the payment until the keys change hands.",
+    title: "Transfer guidance",
+    body: "Read the ownership-transfer steps and check current forms and fees on the official BRTA portal before paying.",
   },
 ]
 
 const stats: { value: number; decimals?: number; suffix?: string; label: string }[] = [
-  { value: 12480, label: "Cars listed right now" },
-  { value: 640, label: "Verified showrooms" },
-  { value: 150, label: "Inspection points per car" },
-  { value: 4.8, decimals: 1, suffix: "/5", label: "Average buyer rating" },
+  { value: 48, label: "Sample cars in this preview" },
+  { value: 11, label: "Bangla and English guides" },
+  { value: 2, label: "Languages in the content set" },
+  { value: 7, label: "Listing review signals" },
 ]
 
 export function WhyCarBuy() {
@@ -62,8 +62,8 @@ export function WhyCarBuy() {
           id="why-title"
           index="04"
           eyebrow="Why CarBuy"
-          title="We check the car, so you can choose it."
-          description="Buying a used car shouldn't mean taking a stranger's word for the papers. This is what happens before a listing earns its Verified badge."
+          title="Know what to check before you drive."
+          description="These prototype workflows help surface details worth reviewing. A demo badge is never a substitute for inspecting the car and original documents yourself."
         />
 
         <Stagger

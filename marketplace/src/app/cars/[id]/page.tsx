@@ -4,7 +4,7 @@ import { notFound } from "next/navigation"
 import { Suspense } from "react"
 import { SiteHeader } from "@/components/home/site-header"
 import { Container } from "@/components/home/section"
-import { CarCard } from "@/components/market/car-card"
+import { ListingCard } from "@/components/home/listing-card"
 import { carDetail } from "@/lib/carbuy-api"
 
 async function Detail({params}:{params:Promise<{id:string}>}) {
@@ -31,7 +31,7 @@ async function Detail({params}:{params:Promise<{id:string}>}) {
     </div>
     <section className="mt-12 max-w-3xl"><h2 className="text-2xl font-semibold">Description</h2><p className="mt-4 leading-relaxed text-muted-foreground">{car.description.text}</p>
       <h2 className="mt-10 text-2xl font-semibold">Buy safely</h2><p className="mt-4 leading-relaxed text-muted-foreground">Check the chassis, registration certificate, owner identity, tax token and fitness documents in person. Do not send an advance to a seller you have not met.</p><Link href="/safety" className="mt-3 inline-block underline">Read the safety guide</Link></section>
-    {car.similar.length>0&&<section className="mt-16"><h2 className="text-3xl font-semibold">Similar sample cars</h2><div className="mt-7 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">{car.similar.map(item=><CarCard key={item.id} car={item} />)}</div></section>}
+    {car.similar.length>0&&<section className="mt-16"><h2 className="text-3xl font-semibold">Similar sample cars</h2><div className="mt-7 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">{car.similar.map(item=><ListingCard key={item.id} car={item} />)}</div></section>}
   </>
 }
 export default function CarPage({params}:{params:Promise<{id:string}>}) {

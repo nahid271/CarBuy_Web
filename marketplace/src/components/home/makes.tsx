@@ -1,7 +1,6 @@
 import Link from "next/link"
 import { ArrowUpRightIcon } from "lucide-react"
 
-import { formatCount } from "@/lib/format"
 import { makeCounts } from "@/lib/mock-listings"
 import { cn } from "@/lib/utils"
 
@@ -32,14 +31,14 @@ export function Makes() {
           index="03"
           eyebrow="Browse by make"
           title="Every badge Bangladesh drives."
-          description="From the Toyotas that fill Dhaka's roads to the German saloons in Gulshan — sorted, counted and verified."
+          description="Explore model names and compare the sample cars currently in the preview."
           action={
             <Link
               href="/cars"
               prefetch={false}
               className="group inline-flex items-center gap-2 text-sm font-medium underline-offset-4 hover:underline"
             >
-              All 40+ makes
+              Browse all sample cars
               <ArrowUpRightIcon className="size-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
             </Link>
           }
@@ -53,7 +52,7 @@ export function Makes() {
           {makeCounts.map((make) => (
             <Link
               key={make.name}
-              href={`/cars?make=${encodeURIComponent(make.name)}`}
+              href={`/cars?${["Toyota", "Honda", "Nissan"].includes(make.name) ? `make=${make.name.toLowerCase()}` : `q=${encodeURIComponent(make.name)}`}`}
               prefetch={false}
               className="group flex h-36 bg-background p-5 transition-colors duration-300 hover:bg-foreground hover:text-background focus-visible:bg-foreground focus-visible:text-background sm:h-40"
             >
@@ -61,7 +60,7 @@ export function Makes() {
                 <MakeMark name={make.name} />
                 <span className="flex items-center justify-between text-xs text-muted-foreground transition-colors duration-300 group-hover:text-background/70 group-focus-visible:text-background/70">
                   <span>
-                    <span className="font-mono tabular-nums">{formatCount(make.count)}</span> listings
+                    Browse sample listings
                   </span>
                   <ArrowUpRightIcon className="size-4 -translate-x-1 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100" />
                 </span>

@@ -1,5 +1,3 @@
-import { StarIcon } from "lucide-react"
-
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 
@@ -8,29 +6,26 @@ import { Container, Eyebrow } from "./section"
 
 const featured = {
   quote:
-    "I'd been burned once by a seller whose papers didn't match the chassis number. With CarBuy the BRTA check was done before I even called — I test-drove the Axio on Saturday and drove it home on Monday.",
-  name: "Tahmid Rahman",
-  detail: "Bought a 2016 Toyota Axio · Mirpur, Dhaka",
+    "Does the chassis number on the car match the registration certificate, the seller’s documents, and the listing? Check all three before agreeing to pay.",
+  name: "CarBuy safety guide",
+  detail: "Question 01 · Vehicle identity",
 }
 
 const others = [
   {
-    quote:
-      "The inspection report flagged a tired hybrid battery on the first Vezel I liked. The second one was clean, and the showroom took ৳80,000 off the first anyway.",
-    name: "Nusrat Jahan",
-    detail: "Bought a 2018 Honda Vezel · Chattogram",
+    quote: "For an imported car, ask to see the auction sheet and check its grade and mileage against the listing. A seller-uploaded image is not an independent verification.",
+    name: "Auction sheet",
+    detail: "Question 02 · Vehicle history",
   },
   {
-    quote:
-      "We needed a Noah for a family of seven. Filtering by Sylhet and seeing real EMIs next to each price saved us weeks of phone calls.",
-    name: "Arif Hossain",
-    detail: "Bought a 2017 Toyota Noah · Sylhet",
+    quote: "Is the asking price unusually low compared with similar cars? Visit, inspect and confirm the documents before sending any booking money.",
+    name: "Price and payment",
+    detail: "Question 03 · Scam prevention",
   },
   {
-    quote:
-      "Sold my Premio in four days. The valuation was within ৳50,000 of the final offer, and they handled the name transfer.",
-    name: "Farhana Akter",
-    detail: "Sold a 2015 Toyota Premio · Gulshan, Dhaka",
+    quote: "Who will complete the BRTA ownership transfer, and when? Check the current official forms, fees and responsibilities before exchanging keys and payment.",
+    name: "Ownership transfer",
+    detail: "Question 04 · After the sale",
   },
 ]
 
@@ -41,24 +36,14 @@ function initials(name: string) {
     .join("")
 }
 
-function Stars() {
-  return (
-    <span className="flex gap-0.5" aria-label="Rated 5 out of 5">
-      {Array.from({ length: 5 }, (_, i) => (
-        <StarIcon key={i} className="size-3.5 fill-current" aria-hidden />
-      ))}
-    </span>
-  )
-}
-
 export function Testimonials() {
   return (
     <section aria-labelledby="testimonials-title" className="py-16 sm:py-20 lg:py-24">
       <Container>
         <Reveal>
-          <Eyebrow index="05">Buyers & sellers</Eyebrow>
+          <Eyebrow index="05">Buyer checklist</Eyebrow>
           <h2 id="testimonials-title" className="sr-only">
-            What buyers and sellers say
+            Questions worth asking
           </h2>
         </Reveal>
 
@@ -98,7 +83,7 @@ export function Testimonials() {
               )}
             >
               <figure className="flex h-full flex-col">
-                <Stars />
+                <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">{t.name}</p>
                 <blockquote className="mt-5 flex-1 leading-relaxed text-pretty">
                   {t.quote}
                 </blockquote>

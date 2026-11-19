@@ -2,7 +2,6 @@ import Image from "next/image"
 import Link from "next/link"
 import { ArrowUpRightIcon } from "lucide-react"
 
-import { formatCount } from "@/lib/format"
 import { bodyTypes, type BodyType } from "@/lib/mock-listings"
 import { cn } from "@/lib/utils"
 
@@ -12,7 +11,7 @@ import { Container, SectionHeading } from "./section"
 function BodyTypeTile({ type, featured }: { type: BodyType; featured?: boolean }) {
   return (
     <Link
-      href={`/cars?body=${type.slug}`}
+      href={`/cars?body=${type.slug === "crossover" ? "suv" : type.slug}`}
       prefetch={false}
       className="group relative block h-full overflow-hidden rounded-[1.5rem] bg-muted text-white"
     >
@@ -36,7 +35,7 @@ function BodyTypeTile({ type, featured }: { type: BodyType; featured?: boolean }
             {type.name}
           </h3>
           <p className="mt-1 text-sm text-white/75">
-            {formatCount(type.count)} cars
+            Browse sample {type.slug === "crossover" ? "SUVs and crossovers" : "cars"}
             <span className="hidden sm:inline"> · {type.blurb}</span>
           </p>
         </div>

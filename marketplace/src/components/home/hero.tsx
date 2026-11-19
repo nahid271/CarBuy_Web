@@ -7,7 +7,6 @@ import { motion, useReducedMotion } from "motion/react"
 import { ArrowRightIcon, BadgeCheckIcon } from "lucide-react"
 
 import { buttonVariants } from "@/components/ui/button"
-import { formatLakh } from "@/lib/format"
 import { getListing, heroPlates } from "@/lib/mock-listings"
 import { cn } from "@/lib/utils"
 
@@ -92,12 +91,12 @@ function HeroPlate() {
       <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-6 p-5 text-white sm:p-7">
         {listing && (
           <Link
-            href={`/cars/${listing.id}`}
+            href={`/cars?q=${encodeURIComponent(listing.model)}`}
             prefetch={false}
             className="group max-w-xs"
           >
             <p className="font-mono text-[0.65rem] tracking-[0.18em] text-white/70 uppercase">
-              On CarBuy now
+              Illustrative photo · explore this model
             </p>
             {/* Re-keyed per plate so the caption fades with its photo. */}
             <motion.div
@@ -112,7 +111,7 @@ function HeroPlate() {
                 <span className="font-normal text-white/70"> · {listing.year}</span>
               </p>
               <p className="mt-0.5 text-sm text-white/80">
-                ৳ {formatLakh(listing.priceBdt)} · {listing.area}, {listing.city}
+                Browse matching sample cars
                 <ArrowRightIcon className="ml-1.5 inline size-3.5 transition-transform group-hover:translate-x-0.5" />
               </p>
             </motion.div>
@@ -159,19 +158,19 @@ export function Hero() {
         >
           <span className="inline-flex items-center gap-1 rounded-full bg-foreground px-2 py-0.5 text-[0.7rem] font-medium text-background">
             <BadgeCheckIcon className="size-3" />
-            Verified
+            Preview
           </span>
-          12,480 papers-checked cars
-          <span className="hidden sm:inline"> across 64 districts</span>
+          Explore cars and compare their details
+          <span className="hidden sm:inline"> across Bangladesh</span>
         </motion.p>
 
         <h1
           id="hero-title"
           className="mt-7 text-[clamp(3.1rem,11vw,10rem)] leading-[0.9] font-semibold tracking-[-0.055em]"
         >
-          <HeadlineLine delay={0.1}>Verified cars.</HeadlineLine>
+          <HeadlineLine delay={0.1}>Find your car.</HeadlineLine>
           <HeadlineLine delay={0.22} className="text-muted-foreground">
-            Honest prices.
+            Ask better questions.
           </HeadlineLine>
         </h1>
 
@@ -182,9 +181,8 @@ export function Hero() {
           className="mt-8 grid gap-7 sm:mt-10 lg:grid-cols-12 lg:items-end"
         >
           <p className="max-w-xl text-lg leading-relaxed text-pretty text-muted-foreground lg:col-span-6 xl:col-span-5">
-            Reconditioned and used cars from inspected showrooms and owners in Dhaka,
-            Chattogram, Sylhet and beyond — with BRTA papers checked before you ever
-            visit.
+            Explore sample reconditioned and used cars, compare asking prices, and see
+            which documents and checks a seller has provided before making contact.
           </p>
           <div className="flex flex-col gap-3 sm:flex-row lg:col-span-6 lg:justify-self-end xl:col-span-7">
             <Link
@@ -196,14 +194,14 @@ export function Hero() {
               <ArrowRightIcon className="transition-transform group-hover:translate-x-0.5" />
             </Link>
             <Link
-              href="/sell"
+              href="/sell-your-car"
               prefetch={false}
               className={cn(
                 buttonVariants({ variant: "outline" }),
                 "h-12 rounded-full px-6 text-[0.95rem]"
               )}
             >
-              Get a free valuation
+              Sell your car
             </Link>
           </div>
         </motion.div>

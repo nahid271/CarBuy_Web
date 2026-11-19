@@ -11,9 +11,9 @@ import { Reveal } from "./reveal"
 import { Container } from "./section"
 
 const steps = [
-  { title: "Book a free inspection", body: "At your home or a CarBuy hub in Dhaka, Chattogram or Sylhet." },
-  { title: "Get offers in 24 hours", body: "Verified showrooms bid on your car; you see every offer." },
-  { title: "Accept and get paid", body: "We handle the BRTA transfer. Money lands before the keys leave." },
+  { title: "Create a secure draft", body: "Enter the chassis, vehicle details and an asking price." },
+  { title: "Add photos and documents", body: "Show buyers the car clearly. Papers are kept for the review workflow." },
+  { title: "Submit for review", body: "A private listing enters moderation before it can appear to buyers." },
 ]
 
 // Worked example for the financing panel.
@@ -47,7 +47,7 @@ export function SellBand() {
               id="sell-title"
               className="mt-5 text-4xl font-semibold tracking-[-0.04em] text-balance sm:text-5xl lg:text-6xl"
             >
-              Sell it this weekend. Get paid on Monday.
+              List your car. Stay in control.
             </h2>
 
             <ol className="mt-10 grid gap-6 lg:mt-auto lg:pt-10">
@@ -64,17 +64,17 @@ export function SellBand() {
 
             <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-4">
               <Link
-                href="/sell"
+                href="/sell-your-car"
                 prefetch={false}
                 className={cn(
                   buttonVariants(),
                   "group h-12 gap-2 rounded-full bg-background px-6 text-[0.95rem] text-foreground hover:bg-background/85"
                 )}
               >
-                Get a free valuation
+                See how selling works
                 <ArrowRightIcon className="transition-transform group-hover:translate-x-0.5" />
               </Link>
-              <p className="text-sm text-background/60">No fees. No obligation.</p>
+              <p className="text-sm text-background/60">The seller studio is a local demo; listing fees are simulated.</p>
             </div>
           </div>
         </Reveal>
@@ -89,11 +89,9 @@ export function SellBand() {
             <span aria-hidden className="h-px w-8 bg-border" />
             Financing
           </p>
-          <h2 className="mt-5 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-            Drive now. Pay monthly.
-          </h2>
+          <h2 className="mt-5 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">Plan beyond the asking price.</h2>
           <p className="mt-3 text-muted-foreground">
-            Car loans from partner banks, with an indicative EMI on every listing.
+            Allow for ownership transfer, tax, fitness and inspection costs. This financing example is illustrative only.
           </p>
 
           <div className="mt-10 lg:mt-auto">
@@ -118,17 +116,17 @@ export function SellBand() {
               ))}
             </dl>
             <Link
-              href="/financing"
+              href="/safety"
               prefetch={false}
               className={cn(
                 buttonVariants({ variant: "outline" }),
                 "mt-6 h-12 w-full rounded-full text-[0.95rem]"
               )}
             >
-              Check your eligibility
+              Read the buying guide
             </Link>
             <p className="mt-3 text-xs text-muted-foreground">
-              Illustrative only; the partner bank sets the final rate.
+              No lender or loan product is connected to this preview.
             </p>
           </div>
         </Reveal>

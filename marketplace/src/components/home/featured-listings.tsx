@@ -13,7 +13,7 @@ import {
   CarouselItem,
   type CarouselApi,
 } from "@/components/ui/carousel"
-import { featuredListings } from "@/lib/mock-listings"
+import type { CarCard } from "@/lib/carbuy-api"
 
 import { ListingCard } from "./listing-card"
 import { Reveal } from "./reveal"
@@ -45,7 +45,7 @@ function useCarouselState(api: CarouselApi | undefined) {
   return { selected, snapCount, canPrev, canNext }
 }
 
-export function FeaturedListings() {
+export function FeaturedListings({ cars, total }: { cars: CarCard[]; total: number }) {
   const reduceMotion = useReducedMotion()
   const [api, setApi] = useState<CarouselApi>()
   const { selected, snapCount, canPrev, canNext } = useCarouselState(api)
@@ -67,16 +67,16 @@ export function FeaturedListings() {
         <SectionHeading
           id="listings-title"
           index="01"
-          eyebrow="Featured"
-          title="Fresh on CarBuy this week."
-          description="Hand-picked from verified showrooms and owners. Every car below has had its papers checked against BRTA records."
+          eyebrow="Sample inventory"
+          title="Find something worth a closer look."
+          description="Explore sample listings and compare the details each seller provides. Check the car and original documents before making any real purchase."
           action={
             <Link
               href="/cars"
               prefetch={false}
               className="group inline-flex items-center gap-2 text-sm font-medium underline-offset-4 hover:underline"
             >
-              View all 12,480 cars
+              Browse all {total} sample cars
               <ArrowRightIcon className="size-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
           }
@@ -91,16 +91,18 @@ export function FeaturedListings() {
           >
             {/* Extra bottom padding keeps the hover lift and shadow from being clipped. */}
             <CarouselContent className="-ml-4 pt-2 pb-10 sm:-ml-5">
-              {featuredListings.map((listing) => (
+              {cars.map((car) => (
                 <CarouselItem
-                  key={listing.id}
+                  key={car.id}
                   className="basis-[86%] pl-4 sm:basis-1/2 sm:pl-5 lg:basis-1/3 xl:basis-1/4"
                 >
-                  <ListingCard listing={listing} />
+                  <ListingCard car={car} />
                 </CarouselItem>
               ))}
             </CarouselContent>
           </Carousel>
+
+          {!cars.length && <p className="rounded-2xl border p-8 text-muted-foreground">The local inventory service is offline. Start it from the `search` directory with `npm run demo`.</p>}
 
           <div className="mt-0 flex items-center gap-6">
             <p className="font-mono text-xs tracking-widest text-muted-foreground tabular-nums">

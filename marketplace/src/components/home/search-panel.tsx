@@ -2,6 +2,7 @@
 
 import { useId, useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { motion } from "motion/react"
 import { SearchIcon } from "lucide-react"
 
@@ -80,9 +81,13 @@ function SearchField({
 }
 
 export function SearchPanel({ className }: { className?: string }) {
+  const router = useRouter()
   const [condition, setCondition] = useState<(typeof conditions)[number]["value"]>("all")
   const [make, setMake] = useState<string | null>(null)
   const [model, setModel] = useState<string | null>(null)
+  const [budget, setBudget] = useState<string | null>(null)
+  const [year, setYear] = useState<string | null>(null)
+  const [city, setCity] = useState<string | null>(null)
 
   const makeOptions = makes.map((m) => ({ value: m, label: m }))
   const modelOptions = (make ? modelsByMake[make] : []).map((m) => ({ value: m, label: m }))
@@ -92,6 +97,22 @@ export function SearchPanel({ className }: { className?: string }) {
       <form
         action="/cars"
         method="get"
+        onSubmit={(event) => {
+          event.preventDefault()
+          const query = new URLSearchParams()
+          if (condition !== "all") query.set("condition", condition)
+          if (make && ["Toyota", "Honda", "Nissan"].includes(make)) query.set("make", make.toLowerCase())
+          if (model) query.set("q", model)
+          else if (make && !["Toyota", "Honda", "Nissan"].includes(make)) query.set("q", make)
+          if (budget) {
+            const [minimum, maximum] = budget.split("-")
+            if (minimum && Number(minimum) > 0) query.set("priceMin", minimum)
+            if (maximum) query.set("priceMax", maximum)
+          }
+          if (year) query.set("yearMin", year)
+          if (city) query.set("district", city.toLowerCase())
+          router.push(`/cars?${query}`)
+        }}
         role="search"
         aria-label="Search cars"
         className="rounded-[1.75rem] border bg-background/95 p-2.5 shadow-[0_40px_100px_-40px_rgb(0_0_0/0.45)] backdrop-blur-xl sm:p-3 dark:shadow-[0_40px_100px_-40px_rgb(0_0_0/0.9)]"
@@ -124,9 +145,8 @@ export function SearchPanel({ className }: { className?: string }) {
               )
             })}
           </div>
-          <input type="hidden" name="condition" value={condition} />
           <p className="hidden font-mono text-[0.7rem] tracking-[0.14em] text-muted-foreground uppercase sm:block">
-            Every listing papers-checked
+            Sample listings · check every claim
           </p>
         </div>
 
@@ -151,13 +171,15 @@ export function SearchPanel({ className }: { className?: string }) {
             onValueChange={setModel}
             disabled={!make}
           />
-          <SearchField label="Budget" name="budget" placeholder="Any budget" options={budgets} />
-          <SearchField label="Year" name="year" placeholder="Any year" options={years} />
+          <SearchField label="Budget" name="budget" placeholder="Any budget" options={budgets} value={budget} onValueChange={setBudget} />
+          <SearchField label="Year" name="year" placeholder="Any year" options={years} value={year} onValueChange={setYear} />
           <SearchField
             label="Location"
             name="city"
             placeholder="All Bangladesh"
             options={cities.map((c) => ({ value: c, label: c }))}
+            value={city}
+            onValueChange={setCity}
             className="sm:col-span-2 lg:col-span-1"
           />
           <div className="bg-background p-1.5 sm:col-span-2 lg:col-span-1">

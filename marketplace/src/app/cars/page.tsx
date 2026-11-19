@@ -2,7 +2,7 @@ import Link from "next/link"
 import { Suspense } from "react"
 import { SiteHeader } from "@/components/home/site-header"
 import { Container } from "@/components/home/section"
-import { CarCard } from "@/components/market/car-card"
+import { ListingCard } from "@/components/home/listing-card"
 import { searchCars } from "@/lib/carbuy-api"
 
 type Params = Promise<Record<string,string|string[]|undefined>>
@@ -30,7 +30,7 @@ async function Results({ searchParams }: { searchParams: Params }) {
           <button className="w-full rounded-lg bg-foreground px-4 py-3 font-semibold text-background">Show cars</button>
         </form>
       </aside>
-      <div><div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{data.cards.map(car=><CarCard key={car.id} car={car} />)}</div>
+      <div><div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{data.cards.map(car=><ListingCard key={car.id} car={car} />)}</div>
         {!data.cards.length&&<p className="rounded-2xl border p-12 text-center">No cars match these filters. Try a broader search.</p>}
         {data.totalPages>1&&<nav className="mt-10 flex justify-center gap-4">{page>1&&<Link href={pageLink(page-1)} className="rounded-full border px-5 py-2">Previous</Link>}<span className="px-3 py-2">Page {page} of {data.totalPages}</span>{page<data.totalPages&&<Link href={pageLink(page+1)} className="rounded-full border px-5 py-2">Next</Link>}</nav>}
       </div>
