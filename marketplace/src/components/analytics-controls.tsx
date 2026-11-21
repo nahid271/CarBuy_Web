@@ -42,7 +42,7 @@ export function AnalyticsControls() {
   return <section role="dialog" aria-label="Analytics choices" className="fixed inset-x-4 bottom-4 z-[80] mx-auto max-w-xl rounded-2xl border bg-card p-5 text-card-foreground shadow-2xl sm:p-6">
     <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Your privacy</p>
     <h2 className="mt-2 text-xl font-semibold">Choose local demo analytics</h2>
-    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">With your permission, this preview records basic search and listing events in this browser only. No names, phone numbers, search terms or payment data are collected. Nothing is sent to CarBuy or another service.</p>
+    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">With your permission, this preview records basic browsing and demo action events in this browser only. No names, phone numbers, search terms or payment data are collected. Nothing is sent to CarBuy or another service.</p>
     {consent === "accepted" && <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
       <span>{count} events in this browser</span>
       <button type="button" className="underline" onClick={download}>Download events</button>

@@ -194,14 +194,14 @@ export function Hero() {
               <ArrowRightIcon className="transition-transform group-hover:translate-x-0.5" />
             </Link>
             <Link
-              href="/sell-your-car"
+              href="/studio"
               prefetch={false}
               className={cn(
                 buttonVariants({ variant: "outline" }),
                 "h-12 rounded-full px-6 text-[0.95rem]"
               )}
             >
-              Sell your car
+              Try the marketplace demo
             </Link>
           </div>
         </motion.div>

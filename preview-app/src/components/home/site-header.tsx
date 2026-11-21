@@ -24,6 +24,7 @@ import { Container } from "./section"
 
 const nav = [
   { href: "/cars", en: "Buy", bn: "গাড়ি কিনুন" },
+  { href: "/studio", en: "Try demo", bn: "ডেমো দেখুন" },
   { href: "/sell-your-car", en: "Sell", bn: "গাড়ি বিক্রি" },
   { href: "/dealer-sign-up", en: "Dealers", bn: "ডিলার" },
   { href: "/pricing", en: "Pricing", bn: "মূল্য" },

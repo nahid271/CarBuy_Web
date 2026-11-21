@@ -22,7 +22,8 @@ export default async function CarDetail({ params }: { params: Promise<{ id: stri
         <p className="mt-2 text-xl text-muted-foreground">{car.trim}</p>
         <p className="mt-8 text-4xl font-semibold">৳ {car.priceBdt.toLocaleString("en-BD")}</p>
         <dl className="mt-8 grid grid-cols-2 gap-4 border-y py-6 text-sm"><div><dt className="text-muted-foreground">Mileage</dt><dd>{car.mileageKm.toLocaleString()} km</dd></div><div><dt className="text-muted-foreground">Fuel</dt><dd>{car.fuel}</dd></div><div><dt className="text-muted-foreground">Transmission</dt><dd>{car.transmission}</dd></div><div><dt className="text-muted-foreground">Location</dt><dd>{car.area}, {car.city}</dd></div></dl>
-        <p className="mt-7 rounded-xl border p-4 text-sm text-muted-foreground">Visual preview only. This is sample inventory; there is no real seller contact or transaction on this public demo.</p>
+        <p className="mt-7 rounded-xl border p-4 text-sm text-muted-foreground">This is sample inventory. Try saved cars, demo chat and reports in the interactive marketplace; no real seller contact or transaction is available.</p>
+        <Link href={`/studio?tab=buy&listing=${car.id}`} className="mt-5 inline-block rounded-full bg-foreground px-5 py-3 text-sm font-medium text-background">Open in interactive demo</Link>
         <ShareListing title={`${car.year} ${car.make} ${car.model}`} />
       </div>
     </div>

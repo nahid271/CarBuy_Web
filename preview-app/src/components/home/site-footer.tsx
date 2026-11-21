@@ -13,6 +13,7 @@ const columns: { title: string; links: { label: string; href: string }[] }[] = [
     title: "Buy",
     links: [
       { label: "All cars", href: "/cars" },
+      { label: "Interactive demo", href: "/studio" },
       { label: "Reconditioned", href: "/cars?condition=reconditioned" },
       { label: "Used", href: "/cars?condition=used" },
       { label: "Hybrids", href: "/cars?fuel=hybrid" },

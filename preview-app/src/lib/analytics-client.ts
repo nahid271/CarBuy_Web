@@ -4,6 +4,13 @@ export type AnalyticsName =
   | "listing_saved"
   | "vdp_viewed"
   | "language_switched"
+  | "sell_step_completed"
+  | "chat_started"
+  | "seller_replied"
+  | "saved_search_created"
+  | "report_submitted"
+  | "listing_published"
+  | "listing_marked_sold"
 
 export type LocalEvent = {
   name: AnalyticsName
@@ -15,7 +22,7 @@ export type AnalyticsConsent = "accepted" | "declined" | "unset"
 
 const consentKey = "carbuy.analytics.consent.v1"
 const eventsKey = "carbuy.analytics.events.v1"
-const allowed = new Set(["listing_id", "position", "source", "result_count", "filter_count", "sort", "from", "to"])
+const allowed = new Set(["listing_id", "position", "source", "result_count", "filter_count", "sort", "from", "to", "step", "seller_type", "target"])
 
 export function analyticsConsent(): AnalyticsConsent {
   if (typeof window === "undefined") return "unset"
