@@ -44,6 +44,7 @@ const columns: { title: string; links: { label: string; href: string }[] }[] = [
       { label: "Listing rules", href: "/listing-rules" },
       { label: "Privacy draft", href: "/privacy" },
       { label: "Pricing", href: "/pricing" },
+      { label: "Build status", href: "/build-status" },
     ],
   },
 ]

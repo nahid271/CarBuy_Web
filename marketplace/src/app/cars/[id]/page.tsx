@@ -7,6 +7,7 @@ import { Container } from "@/components/home/section"
 import { ListingCard } from "@/components/home/listing-card"
 import { carDetail } from "@/lib/carbuy-api"
 import { DetailTelemetry } from "@/components/analytics-telemetry"
+import { ShareListing } from "@/components/share-listing"
 
 async function Detail({params}:{params:Promise<{id:string}>}) {
   const {id}=await params
@@ -29,6 +30,7 @@ async function Detail({params}:{params:Promise<{id:string}>}) {
         <div className="mt-7 rounded-2xl border bg-card p-5"><p className="text-xs uppercase tracking-widest text-muted-foreground">Seller</p><p className="mt-2 text-xl font-semibold">{car.seller.name}</p><p className="text-sm text-muted-foreground">{car.seller.type === "dealer" ? "Showroom" : "Private seller"} · sample identity</p>
           <a href={`http://127.0.0.1:4175/car/${encodeURIComponent(car.id)}`} className="mt-5 block rounded-xl bg-foreground px-5 py-4 text-center text-sm font-semibold text-background">Open interactive detail and chat demo</a>
           <p className="mt-3 text-xs text-muted-foreground">The interactive module uses a separate local demo account.</p></div>
+        <ShareListing title={car.title} />
       </div>
     </div>
     <section className="mt-12 max-w-3xl"><h2 className="text-2xl font-semibold">Description</h2><p className="mt-4 leading-relaxed text-muted-foreground">{car.description.text}</p>

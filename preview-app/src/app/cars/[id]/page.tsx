@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/home/site-header"
 import { SiteFooter } from "@/components/home/site-footer"
 import { featuredListings } from "@/lib/mock-listings"
 import { DetailTelemetry } from "@/components/analytics-telemetry"
+import { ShareListing } from "@/components/share-listing"
 
 export function generateStaticParams() { return featuredListings.map(car => ({ id: car.id })) }
 
@@ -22,6 +23,7 @@ export default async function CarDetail({ params }: { params: Promise<{ id: stri
         <p className="mt-8 text-4xl font-semibold">৳ {car.priceBdt.toLocaleString("en-BD")}</p>
         <dl className="mt-8 grid grid-cols-2 gap-4 border-y py-6 text-sm"><div><dt className="text-muted-foreground">Mileage</dt><dd>{car.mileageKm.toLocaleString()} km</dd></div><div><dt className="text-muted-foreground">Fuel</dt><dd>{car.fuel}</dd></div><div><dt className="text-muted-foreground">Transmission</dt><dd>{car.transmission}</dd></div><div><dt className="text-muted-foreground">Location</dt><dd>{car.area}, {car.city}</dd></div></dl>
         <p className="mt-7 rounded-xl border p-4 text-sm text-muted-foreground">Visual preview only. This is sample inventory; there is no real seller contact or transaction on this public demo.</p>
+        <ShareListing title={`${car.year} ${car.make} ${car.model}`} />
       </div>
     </div>
   </main><SiteFooter /></>

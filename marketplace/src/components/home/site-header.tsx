@@ -6,6 +6,8 @@ import { useMotionValueEvent, useScroll } from "motion/react"
 import { ArrowUpRightIcon, MenuIcon } from "lucide-react"
 
 import { ThemeToggle } from "@/components/theme-toggle"
+import { LanguageToggle } from "@/components/language-toggle"
+import { useLanguage } from "@/lib/language-client"
 import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Sheet,
@@ -21,11 +23,11 @@ import { cn } from "@/lib/utils"
 import { Container } from "./section"
 
 const nav = [
-  { href: "/cars", label: "Buy" },
-  { href: "/sell-your-car", label: "Sell" },
-  { href: "/dealer-sign-up", label: "Dealers" },
-  { href: "/pricing", label: "Pricing" },
-  { href: "/safety", label: "Safety" },
+  { href: "/cars", en: "Buy", bn: "গাড়ি কিনুন" },
+  { href: "/sell-your-car", en: "Sell", bn: "গাড়ি বিক্রি" },
+  { href: "/dealer-sign-up", en: "Dealers", bn: "ডিলার" },
+  { href: "/pricing", en: "Pricing", bn: "মূল্য" },
+  { href: "/safety", en: "Safety", bn: "নিরাপত্তা" },
 ]
 
 export function Wordmark({ className }: { className?: string }) {
@@ -46,6 +48,7 @@ export function Wordmark({ className }: { className?: string }) {
 }
 
 export function SiteHeader() {
+  const language = useLanguage()
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const { scrollY } = useScroll()
@@ -71,19 +74,20 @@ export function SiteHeader() {
               prefetch={false}
               className="rounded-full px-3.5 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
-              {item.label}
+              {item[language]}
             </Link>
           ))}
         </nav>
 
         <div className="ml-auto flex items-center gap-1.5">
+          <LanguageToggle />
           <ThemeToggle />
           <Link
             href="/sell-your-car"
             prefetch={false}
             className={cn(buttonVariants(), "hidden h-9 rounded-full px-4 sm:inline-flex")}
           >
-            Sell your car
+            {language === "bn" ? "গাড়ি বিক্রি করুন" : "Sell your car"}
           </Link>
 
           <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
@@ -114,7 +118,7 @@ export function SiteHeader() {
                       <span className="font-mono text-xs font-normal tracking-widest text-muted-foreground">
                         0{i + 1}
                       </span>
-                      {item.label}
+                      {item[language]}
                     </span>
                     <ArrowUpRightIcon className="size-5 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-foreground" />
                   </Link>
@@ -127,7 +131,7 @@ export function SiteHeader() {
                   onClick={() => setMenuOpen(false)}
                   className={cn(buttonVariants(), "h-12 rounded-full text-base")}
                 >
-                  Sell your car
+                  {language === "bn" ? "গাড়ি বিক্রি করুন" : "Sell your car"}
                 </Link>
               </SheetFooter>
             </SheetContent>

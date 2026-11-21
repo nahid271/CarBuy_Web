@@ -4,6 +4,8 @@ import { AnalyticsService, attribution } from '../src/analytics.ts';
 import { CommerceService, demoPrices, type Order, type PaymentGateway } from '../src/commerce.ts';
 import { NotificationService } from '../src/notifications.ts';
 import { enabledMarket, markets } from '../../shared/markets.ts';
+import { preferredBangladeshLanguage } from '../../shared/language.ts';
+import { budgetTotal, budgetLines, openQuestions, risks } from '../../shared/launch-plan.ts';
 
 test('notifications are bilingual, respect channel preferences and deduplicate retries',()=>{
   const notices=new NotificationService();
@@ -68,6 +70,22 @@ test('market configuration keeps discovery countries disabled',()=>{
   assert.deepEqual(markets.BD.languages,['bn','en']);
   assert.throws(()=>enabledMarket('ID'),/requires discovery/);
   assert.throws(()=>enabledMarket('TH'),/requires discovery/);
+});
+
+test('Bangla device language is the default unless a saved choice overrides it',()=>{
+  assert.equal(preferredBangladeshLanguage(null,'bn-BD'),'bn');
+  assert.equal(preferredBangladeshLanguage(null,'en-AU'),'en');
+  assert.equal(preferredBangladeshLanguage('en','bn-BD'),'en');
+  assert.equal(preferredBangladeshLanguage('invalid','bn-BD'),'bn');
+});
+
+test('PRD planning register has complete decision and risk IDs and validates budget edits',()=>{
+  assert.equal(budgetLines.length,6);
+  assert.equal(budgetTotal(),1_210_000);
+  assert.equal(budgetTotal({marketing:700_000}),1_190_000);
+  assert.throws(()=>budgetTotal({marketing:-1}),/Invalid planning amount/);
+  assert.deepEqual(openQuestions.map(x=>x.id),Array.from({length:10},(_,i)=>`O${i+1}`));
+  assert.deepEqual(risks.map(x=>x.id),Array.from({length:10},(_,i)=>`R${i+1}`));
 });
 
 test('auction sheet fulfilment refunds when no sheet is found',async()=>{
