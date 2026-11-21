@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
+import { priceHypothesesBdt, type PricedProduct } from '../../shared/pricing.ts';
 
-export type Product='private_listing'|'top_7d'|'featured_7d'|'urgent_7d'|'dealer_10'|'dealer_25'|'dealer_50'|'auction_sheet';
+export type Product=PricedProduct;
 export type PaymentMethod='bkash'|'nagad'|'rocket'|'card';
 export type Order={id:string;buyerId:string;product:Product;listingId?:string;dealerId?:string;status:'pending'|'paid'|'refund_pending'|'refunded';
   subtotalBdt:number;discountBdt:number;vatBdt:number;totalBdt:number;currency:'BDT';checkoutUrl:string;gatewayReference:string;
@@ -11,9 +12,8 @@ export type PaymentGateway={create(order:Pick<Order,'id'|'totalBdt'|'currency'>)
   verify(order:Order,proof:string):Promise<{transactionId:string;amountBdt:number;currency:string;method:PaymentMethod}|null>;
   refund(order:Order):Promise<{reference:string}|null>};
 export type CommerceConfig={pricesBdt:Record<Product,number>;vatRate:number};
-export const demoPrices:Record<Product,number>={private_listing:400,top_7d:300,featured_7d:200,urgent_7d:100,
-  dealer_10:3000,dealer_25:6500,dealer_50:11000,auction_sheet:500};
-const creditCount:Partial<Record<Product,number>>={dealer_10:10,dealer_25:25,dealer_50:50};
+export const demoPrices:Record<Product,number>=priceHypothesesBdt;
+const creditCount:Partial<Record<Product,number>>={dealer_10:10,dealer_25:25,dealer_50:50,dealer_200:200};
 export class CommerceService{
   private readonly gateway:PaymentGateway;
   private readonly config:CommerceConfig;

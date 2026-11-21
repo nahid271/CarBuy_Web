@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Noto_Sans_Bengali } from "next/font/google";
 import { Providers } from "@/components/providers";
+import { AnalyticsControls } from "@/components/analytics-controls";
 import { themeScript } from "@/lib/theme";
 import "./globals.css";
 
@@ -38,7 +39,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="min-h-full flex flex-col">
-        <Providers>{children}</Providers>
+        <Providers>{children}<AnalyticsControls /></Providers>
       </body>
     </html>
   );

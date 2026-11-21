@@ -1,0 +1,41 @@
+"use client"
+
+import { useState } from "react"
+import { priceHypothesesBdt } from "@/lib/pricing"
+
+const money = (amount: number) => `৳${amount.toLocaleString("en-BD")}`
+
+export function PricingEstimator() {
+  const [cars, setCars] = useState(1)
+  const [top, setTop] = useState(false)
+  const [featured, setFeatured] = useState(false)
+  const [urgent, setUrgent] = useState(false)
+  const [sheet, setSheet] = useState(false)
+  const total = cars * priceHypothesesBdt.private_listing +
+    (top ? priceHypothesesBdt.top_7d : 0) +
+    (featured ? priceHypothesesBdt.featured_7d : 0) +
+    (urgent ? priceHypothesesBdt.urgent_7d : 0) +
+    (sheet ? priceHypothesesBdt.auction_sheet : 0)
+  return <div className="rounded-[1.75rem] border bg-card p-6 sm:p-8">
+    <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">Private seller estimate</p>
+    <h2 className="mt-3 text-2xl font-semibold">Plan a listing</h2>
+    <p className="mt-2 text-sm text-muted-foreground">Illustrative subtotal only. Pricing, tax and any coupon are confirmed before a live checkout.</p>
+    <label className="mt-6 block text-sm font-medium" htmlFor="car-count">Number of cars</label>
+    <select id="car-count" className="mt-2 w-full rounded-xl border bg-background px-4 py-3" value={cars} onChange={e => setCars(Number(e.target.value))}>
+      {[1, 2, 3].map(n => <option key={n} value={n}>{n} {n === 1 ? "car" : "cars"}</option>)}
+    </select>
+    <div className="mt-5 space-y-3 text-sm">
+      {[
+        { label: "Top placement · 7 days", price: priceHypothesesBdt.top_7d, value: top, set: setTop },
+        { label: "Featured placement · 7 days", price: priceHypothesesBdt.featured_7d, value: featured, set: setFeatured },
+        { label: "Urgent badge · 7 days", price: priceHypothesesBdt.urgent_7d, value: urgent, set: setUrgent },
+        { label: "Auction-sheet request · manual", price: priceHypothesesBdt.auction_sheet, value: sheet, set: setSheet },
+      ].map(item => <label key={item.label} className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border px-4 py-3">
+        <span className="flex items-center gap-3"><input type="checkbox" checked={item.value} onChange={e => item.set(e.target.checked)} className="size-4 accent-foreground" />{item.label}</span>
+        <span className="whitespace-nowrap text-muted-foreground">+{money(item.price)}</span>
+      </label>)}
+    </div>
+    <div className="mt-6 flex items-end justify-between border-t pt-5"><span className="text-sm text-muted-foreground">Illustrative subtotal</span><strong className="text-3xl">{money(total)}</strong></div>
+    <p className="mt-3 text-xs text-muted-foreground">No payment is taken in this preview. Boosts are optional and paid placement must be labelled on real listings.</p>
+  </div>
+}

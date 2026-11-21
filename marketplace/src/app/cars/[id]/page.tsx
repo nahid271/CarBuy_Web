@@ -6,12 +6,14 @@ import { SiteHeader } from "@/components/home/site-header"
 import { Container } from "@/components/home/section"
 import { ListingCard } from "@/components/home/listing-card"
 import { carDetail } from "@/lib/carbuy-api"
+import { DetailTelemetry } from "@/components/analytics-telemetry"
 
 async function Detail({params}:{params:Promise<{id:string}>}) {
   const {id}=await params
   const car=await carDetail(id)
   if(!car)notFound()
   return <>
+    <DetailTelemetry listingId={car.id} />
     <nav className="mb-8 text-sm text-muted-foreground"><Link href="/cars" className="hover:text-foreground">Cars</Link> / {car.title}</nav>
     <div className="rounded-2xl border bg-muted/60 p-4 text-sm">Sample listing and simulated trust badges. Inspect a real car and original papers before paying anyone.</div>
     <div className="mt-8 grid gap-8 lg:grid-cols-[1.5fr_1fr]">

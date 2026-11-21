@@ -24,6 +24,7 @@ const nav = [
   { href: "/cars", label: "Buy" },
   { href: "/sell-your-car", label: "Sell" },
   { href: "/dealer-sign-up", label: "Dealers" },
+  { href: "/pricing", label: "Pricing" },
   { href: "/safety", label: "Safety" },
 ]
 

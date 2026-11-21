@@ -6,6 +6,7 @@ import { motion } from "motion/react"
 import { ArrowUpRightIcon, MapPinIcon } from "lucide-react"
 import type { CarCard } from "@/lib/carbuy-api"
 import { formatKm, formatLakh } from "@/lib/format"
+import { trackLocalEvent } from "@/lib/analytics-client"
 
 export function ListingCard({ car }: { car: CarCard }) {
   return <motion.article
@@ -27,7 +28,7 @@ export function ListingCard({ car }: { car: CarCard }) {
     </div>
     <div className="flex flex-1 flex-col p-5">
       <div className="flex items-baseline justify-between gap-3">
-        <h3 className="text-lg font-semibold tracking-tight"><Link href={`/cars/${car.id}`} className="outline-none after:absolute after:inset-0 after:rounded-[1.5rem] focus-visible:after:ring-2 focus-visible:after:ring-ring">{car.title}</Link></h3>
+        <h3 className="text-lg font-semibold tracking-tight"><Link href={`/cars/${car.id}`} onClick={() => trackLocalEvent("listing_clicked", { listing_id: car.id, source: "card" })} className="outline-none after:absolute after:inset-0 after:rounded-[1.5rem] focus-visible:after:ring-2 focus-visible:after:ring-ring">{car.title}</Link></h3>
         <span className="font-mono text-xs text-muted-foreground">{car.year}</span>
       </div>
       <p className="mt-1 text-sm capitalize text-muted-foreground">{car.condition}</p>

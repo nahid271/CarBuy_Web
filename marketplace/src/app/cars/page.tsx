@@ -4,6 +4,7 @@ import { SiteHeader } from "@/components/home/site-header"
 import { Container } from "@/components/home/section"
 import { ListingCard } from "@/components/home/listing-card"
 import { searchCars } from "@/lib/carbuy-api"
+import { SearchTelemetry } from "@/components/analytics-telemetry"
 
 type Params = Promise<Record<string,string|string[]|undefined>>
 const keys = new Set(["q","condition","make","model","priceMin","priceMax","yearMin","yearMax","mileageMax","fuel","body","transmission","seller","district","auctionVerified","papersChecked","verifiedDealer","sort","page"])
@@ -17,6 +18,7 @@ async function Results({ searchParams }: { searchParams: Params }) {
   const page = data.page
   const pageLink = (next: number) => { const copy = new URLSearchParams(query); copy.set("page",String(next)); return `/cars?${copy}` }
   return <>
+    <SearchTelemetry resultCount={data.total} filterCount={[...query.keys()].filter(key => key !== "page" && key !== "sort").length} sort={typeof input.sort === "string" ? input.sort : "best_match"} />
     <p className="mb-6 text-sm text-muted-foreground">{data.total} sample cars found</p>
     <div className="grid gap-6 lg:grid-cols-[250px_1fr]">
       <aside className="h-fit rounded-2xl border bg-card p-5">

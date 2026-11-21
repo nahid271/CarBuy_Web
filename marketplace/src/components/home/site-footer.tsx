@@ -3,6 +3,7 @@ import { BookOpenIcon, ShieldCheckIcon } from "lucide-react"
 
 import { buttonVariants } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { AnalyticsPreferencesButton } from "@/components/analytics-controls"
 
 import { Reveal } from "./reveal"
 import { Container } from "./section"
@@ -42,6 +43,7 @@ const columns: { title: string; links: { label: string; href: string }[] }[] = [
       { label: "Contact", href: "/contact" },
       { label: "Listing rules", href: "/listing-rules" },
       { label: "Privacy draft", href: "/privacy" },
+      { label: "Pricing", href: "/pricing" },
     ],
   },
 ]
@@ -127,7 +129,7 @@ export function SiteFooter() {
       <div className="border-t">
         <Container className="flex flex-col gap-4 py-6 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
           <p>© 2026 CarBuy · Product preview</p>
-          <p>Bangla and English guidance is being integrated into this storefront.</p>
+          <div className="flex flex-wrap gap-4"><span>Bangla and English guidance is being integrated.</span><AnalyticsPreferencesButton /></div>
         </Container>
       </div>
     </footer>

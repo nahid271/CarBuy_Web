@@ -2,6 +2,10 @@
 
 This repository contains the black-themed CarBuy storefront and Bangladesh marketplace MVP modules. The current work also adds trust/safety, SEO/content, payment-service foundations, notifications and analytics for PRD sections 9.9–9.15. The local demos use file-backed or in-memory storage and simulated identities/payments; they are **not a live transactional marketplace**. See the [full PRD audit](MVP-AUDIT.md) for sections 9.1–9.15 and Appendices A–B, and [MVP-STATUS.md](MVP-STATUS.md) for more detail on sections 9.9–9.15.
 
+The requested follow-on work is tracked in [PRD sections 16–25](SECTIONS-16-25.md): local analytics consent and events, an illustrative pricing page, shared market configuration, and explicit business/provider launch gates. The PRD has no subsections numbered 9.16–9.25. The [shareable black-themed preview](https://nahid271.github.io/CarBuy_Web/preview/) remains a static sample, not a live marketplace.
+
+The public preview source is in [`preview-app/`](preview-app/README.md); `bash scripts/build-public-preview.sh` regenerates the committed `preview/` export. This keeps the GitHub Pages preview reviewable and reproducible.
+
 | Module | Scope | Guide |
 | --- | --- | --- |
 | `marketplace/` | Black-themed Next.js storefront connected to sample inventory, search, detail and guides | [Marketplace README](marketplace/README.md) |

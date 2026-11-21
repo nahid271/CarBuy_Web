@@ -7,7 +7,7 @@ export const eventNames=[
   'boost_purchased','credits_purchased','report_submitted','signup_completed','app_installed','language_switched',
 ] as const;
 export type EventName=typeof eventNames[number];
-const propertyKeys=new Set(['listing_id','position','source','seller_type','response_minutes','result_count','language','sort',
+const propertyKeys=new Set(['listing_id','position','source','seller_type','response_minutes','result_count','filter_count','language','sort',
   'step','platform','success','chassis_code','result','found','mismatch','hours','review_minutes','sold_via','days_live',
   'product','amount','method','target','reason','from','to','utm_source','utm_medium','utm_campaign','referrer_host']);
 export type AnalyticsEvent={id:string;name:EventName;visitorId:string;at:string;properties:Record<string,string|number|boolean>};

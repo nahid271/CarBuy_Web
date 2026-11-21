@@ -3,6 +3,7 @@ import test from 'node:test';
 import { AnalyticsService, attribution } from '../src/analytics.ts';
 import { CommerceService, demoPrices, type Order, type PaymentGateway } from '../src/commerce.ts';
 import { NotificationService } from '../src/notifications.ts';
+import { enabledMarket, markets } from '../../shared/markets.ts';
 
 test('notifications are bilingual, respect channel preferences and deduplicate retries',()=>{
   const notices=new NotificationService();
@@ -21,8 +22,8 @@ test('analytics needs consent, discards unapproved properties, and removes withd
   const analytics=new AnalyticsService(),id='visitor_123';
   assert.equal(analytics.track(id,'search_performed',{result_count:5}),null);
   analytics.setConsent(id,true);
-  const event=analytics.track(id,'search_performed',{result_count:5,phone:'+8801700000000'});
-  assert.deepEqual(event?.properties,{result_count:5});
+  const event=analytics.track(id,'search_performed',{result_count:5,filter_count:2,phone:'+8801700000000'});
+  assert.deepEqual(event?.properties,{result_count:5,filter_count:2});
   assert.deepEqual(attribution({url:'https://carbuy.test/?utm_source=facebook&utm_campaign=launch',
     referrer:'https://example.com/path'}),{utm_source:'facebook',utm_campaign:'launch',referrer_host:'example.com'});
   analytics.setConsent(id,false);
@@ -39,7 +40,7 @@ test('paid products need verified amount and unique gateway transaction before e
   const commerce=new CommerceService(gateway,{pricesBdt:demoPrices,vatRate:0.1});
   commerce.createCoupon({code:'LAUNCH',discountBdt:500,expiresAt:'2030-01-01T00:00:00.000Z',maxUses:1});
   const order=await commerce.createOrder({buyerId:'dealer-1',dealerId:'dealer-1',product:'dealer_10',coupon:'LAUNCH'});
-  assert.equal(order.totalBdt,2750);
+  assert.equal(order.totalBdt,2200);
   assert.equal(commerce.credits('dealer-1'),0);
   await assert.rejects(commerce.settle(order.id,'proof'),/could not be verified/);
   amount=order.totalBdt;
@@ -47,7 +48,7 @@ test('paid products need verified amount and unique gateway transaction before e
   assert.equal(commerce.credits('dealer-1'),10);
   await commerce.settle(order.id,'proof');
   assert.equal(commerce.credits('dealer-1'),10);
-  assert.equal(commerce.receipt('dealer-1',order.id).vatBdt,250);
+  assert.equal(commerce.receipt('dealer-1',order.id).vatBdt,200);
   await assert.rejects(commerce.createOrder({buyerId:'dealer-2',dealerId:'dealer-2',product:'dealer_10',coupon:'LAUNCH'}),/Coupon unavailable/);
   transaction='txn-2';
   refundFound=false;
@@ -56,6 +57,17 @@ test('paid products need verified amount and unique gateway transaction before e
   refundFound=true;
   assert.equal((await commerce.refund(order.id)).status,'refunded');
   assert.equal(commerce.credits('dealer-1'),0);
+  const largePack=await commerce.createOrder({buyerId:'dealer-2',dealerId:'dealer-2',product:'dealer_200'});
+  amount=largePack.totalBdt;transaction='txn-3';
+  await commerce.settle(largePack.id,'proof');
+  assert.equal(commerce.credits('dealer-2'),200);
+});
+
+test('market configuration keeps discovery countries disabled',()=>{
+  assert.equal(enabledMarket('BD').currency,'BDT');
+  assert.deepEqual(markets.BD.languages,['bn','en']);
+  assert.throws(()=>enabledMarket('ID'),/requires discovery/);
+  assert.throws(()=>enabledMarket('TH'),/requires discovery/);
 });
 
 test('auction sheet fulfilment refunds when no sheet is found',async()=>{
