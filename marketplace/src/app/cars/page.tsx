@@ -5,6 +5,7 @@ import { Container } from "@/components/home/section"
 import { ListingCard } from "@/components/home/listing-card"
 import { searchCars } from "@/lib/carbuy-api"
 import { SearchTelemetry } from "@/components/analytics-telemetry"
+import { LocalizedText } from "@/components/ui-language-surface"
 
 type Params = Promise<Record<string,string|string[]|undefined>>
 const keys = new Set(["q","condition","make","model","priceMin","priceMax","yearMin","yearMax","mileageMax","fuel","body","transmission","seller","district","auctionVerified","papersChecked","verifiedDealer","sort","page"])
@@ -19,7 +20,7 @@ async function Results({ searchParams }: { searchParams: Params }) {
   const pageLink = (next: number) => { const copy = new URLSearchParams(query); copy.set("page",String(next)); return `/cars?${copy}` }
   return <>
     <SearchTelemetry resultCount={data.total} filterCount={[...query.keys()].filter(key => key !== "page" && key !== "sort").length} sort={typeof input.sort === "string" ? input.sort : "best_match"} />
-    <p className="mb-6 text-sm text-muted-foreground">{data.total} sample cars found</p>
+    <p className="mb-6 text-sm text-muted-foreground"><LocalizedText text={`${data.total} sample cars found`} /></p>
     <div className="grid gap-6 lg:grid-cols-[250px_1fr]">
       <aside className="h-fit rounded-2xl border bg-card p-5">
         <form action="/cars" className="space-y-5 text-sm">
@@ -34,7 +35,7 @@ async function Results({ searchParams }: { searchParams: Params }) {
       </aside>
       <div><div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{data.cards.map(car=><ListingCard key={car.id} car={car} />)}</div>
         {!data.cards.length&&<p className="rounded-2xl border p-12 text-center">No cars match these filters. Try a broader search.</p>}
-        {data.totalPages>1&&<nav className="mt-10 flex justify-center gap-4">{page>1&&<Link href={pageLink(page-1)} className="rounded-full border px-5 py-2">Previous</Link>}<span className="px-3 py-2">Page {page} of {data.totalPages}</span>{page<data.totalPages&&<Link href={pageLink(page+1)} className="rounded-full border px-5 py-2">Next</Link>}</nav>}
+        {data.totalPages>1&&<nav className="mt-10 flex justify-center gap-4">{page>1&&<Link href={pageLink(page-1)} className="rounded-full border px-5 py-2">Previous</Link>}<span className="px-3 py-2"><LocalizedText text={`Page ${page} of ${data.totalPages}`} /></span>{page<data.totalPages&&<Link href={pageLink(page+1)} className="rounded-full border px-5 py-2">Next</Link>}</nav>}
       </div>
     </div>
   </>

@@ -11,6 +11,8 @@ let ephemeral: BangladeshLanguage | null = null
 function currentLanguage(): BangladeshLanguage {
   let saved: string | null = null
   try { saved = window.localStorage.getItem(key) } catch { /* Storage can be disabled. */ }
+  const requested = new URLSearchParams(window.location.search).get("lang")
+  if (requested === "en" || requested === "bn") return requested
   return preferredBangladeshLanguage(saved || ephemeral, window.navigator.languages?.[0] || window.navigator.language)
 }
 
@@ -32,6 +34,9 @@ export function setLanguage(next: BangladeshLanguage) {
   ephemeral = next
   try { window.localStorage.setItem(key, next) } catch { /* This tab still switches. */ }
   document.documentElement.lang = next
+  const url = new URL(window.location.href)
+  url.searchParams.set("lang", next)
+  window.history.replaceState(null, "", url)
   window.dispatchEvent(new Event(eventName))
   trackLocalEvent("language_switched", { from: previous, to: next })
 }

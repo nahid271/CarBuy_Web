@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { ListingCard } from "@/components/home/listing-card"
 import { SearchTelemetry } from "@/components/analytics-telemetry"
+import { LocalizedText } from "@/components/ui-language-surface"
 import { featuredListings } from "@/lib/mock-listings"
 
 export function SampleCarResults() {
@@ -38,7 +39,7 @@ export function SampleCarResults() {
   const filterCount = [...params.keys()].filter(key => key !== "sort" && key !== "page").length
   return <>
     <SearchTelemetry resultCount={cars.length} filterCount={filterCount} sort={params.get("sort") || "best_match"} />
-    <p className="mt-5 text-sm text-muted-foreground">{cars.length} sample {cars.length === 1 ? "car" : "cars"} match these filters. This is a small illustrative set, not live inventory.</p>
+    <p className="mt-5 text-sm text-muted-foreground"><LocalizedText text={`${cars.length} sample ${cars.length === 1 ? "car" : "cars"} match these filters. This is a small illustrative set, not live inventory.`} /></p>
     {cars.length > 0 ? <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{cars.map(car => <ListingCard key={car.id} listing={car} />)}</div> :
       <div className="mt-10 rounded-2xl border bg-card p-10 text-center"><h2 className="text-xl font-semibold">No sample cars match</h2><p className="mt-2 text-muted-foreground">Try a broader search or clear the filters.</p><Link href="/cars" className="mt-5 inline-block rounded-full border px-5 py-2 text-sm">Clear filters</Link></div>}
   </>

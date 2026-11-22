@@ -2,4 +2,4 @@
 :HL["/CarBuy_Web/preview/_next/static/chunks/142wxorxfof47.css","style"]
 2:[["children",{"s":"__PAGE__","h":160}]]
 1:[["children",{"s":"/_not-found","h":96,"c":"$Q2"}]]
-0:{"b":"xWR9b8pvFCl9SC7y3P_e0","t":{"t":{"s":"","h":80,"c":"$Q1"}}}
+0:{"b":"L3dBaW4pS5mC1rMKI4coN","t":{"t":{"s":"","h":80,"c":"$Q1"}}}

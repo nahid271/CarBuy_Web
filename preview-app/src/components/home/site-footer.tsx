@@ -131,7 +131,7 @@ export function SiteFooter() {
       <div className="border-t">
         <Container className="flex flex-col gap-4 py-6 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
           <p>© 2026 CarBuy · Product preview</p>
-          <div className="flex flex-wrap gap-4"><span>Bangla and English guidance is being integrated.</span><AnalyticsPreferencesButton /></div>
+          <div className="flex flex-wrap gap-4"><span>English and Bangla are available throughout the preview.</span><AnalyticsPreferencesButton /></div>
         </Container>
       </div>
     </footer>

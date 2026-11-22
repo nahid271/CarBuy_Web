@@ -4,6 +4,7 @@ import { ReactLenis } from "lenis/react"
 import { MotionConfig, useReducedMotion } from "motion/react"
 
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { UiLanguageSurface } from "@/components/ui-language-surface"
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const reduceMotion = useReducedMotion()
@@ -11,7 +12,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <MotionConfig reducedMotion="user">
       {!reduceMotion && <ReactLenis root />}
-      <TooltipProvider>{children}</TooltipProvider>
+      <TooltipProvider>{children}<UiLanguageSurface /></TooltipProvider>
     </MotionConfig>
   )
 }

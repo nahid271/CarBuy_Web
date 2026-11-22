@@ -28,7 +28,7 @@ The table names **every PRD ID once**: 54 local, 59 partial, 18 missing. No sect
 
 | Appendix | Audit result |
 | --- | --- |
-| A — Public web screens | **Partial.** Home, search, detail, dealer profile, sell and content prototypes exist across separate modules. Full bilingual black-theme integration, model-price pages driven by live stock, and final legal/contact pages are missing. |
+| A — Public web screens | **Partial.** Home, search, detail, dealer profile, sell and content prototypes exist across separate modules. Fixed black-theme interface copy now switches English/Bangla, but model-price pages driven by live stock, localized SEO routes, arbitrary seller-written content translation and final legal/contact pages are missing. |
 | A — Android screens | **Missing.** No Android app or the specified search, chat, saved, sell, account and notification screens. |
 | A — Dealer portal | **Local prototype.** Dashboard, stock, editor, bulk tools, credits, leads, stats, team and profile exist in the local responsive dealer demo; payment, account and notification integrations remain simulated. |
 | A — Admin console | **Partial.** Scattered moderator/catalog/dealer/commerce operations exist, but the specified unified queues, reports, cross-module lookup, configuration and audit interface do not. |

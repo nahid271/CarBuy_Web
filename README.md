@@ -4,6 +4,8 @@ This repository contains the black-themed CarBuy storefront and Bangladesh marke
 
 The requested follow-on work is tracked in [PRD sections 16–25](SECTIONS-16-25.md). The supplied PRD has no subsections numbered 9.16–9.25. The [shareable black-themed preview](https://nahid271.github.io/CarBuy_Web/preview/) now includes an [interactive marketplace demo](https://nahid271.github.io/CarBuy_Web/preview/studio/) with browser-local buyer, private seller, dealer and moderator journeys. Its personas, data, messages, credits and alerts are simulated on each visitor's device; it is not a live transactional marketplace. See [INTERACTIVE-DEMO.md](INTERACTIVE-DEMO.md) for the exact scope.
 
+The black-themed storefront and public preview share an [English–Bangla UI pack](LANGUAGE-PACK.md). The header switch changes fixed interface copy, guidance, search, car details, the interactive demo and planning workbench, and remembers the choice in the browser. A URL such as `?lang=bn` opens a page in Bangla for sharing.
+
 The public preview source is in [`preview-app/`](preview-app/README.md); `bash scripts/build-public-preview.sh` regenerates the committed `preview/` export. This keeps the GitHub Pages preview reviewable and reproducible.
 
 | Module | Scope | Guide |

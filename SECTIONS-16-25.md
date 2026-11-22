@@ -36,7 +36,7 @@ The supplied PRD ends its MVP functional requirement IDs at **9.15**. This regis
 | O7 | Founding-dealer credit count and expiry | Open; grant mechanism exists in demo, policy unapproved. |
 | O8 | Public registration-number masking | PRD recommends masking; enforce and verify across every future API/UI before real launch. |
 | O9 | Domain and trademark clearance | Open; no clearance claim. |
-| O10 | Default language | The black storefront now selects Bangla on Bangla-locale devices unless the visitor saved another choice. The header, safety/guides and pricing switch languages. Home and search still need full translation before this is complete. |
+| O10 | Default language | The black storefront selects Bangla on Bangla-locale devices unless the visitor saved another choice. The shared UI pack now switches fixed homepage, search, detail, pricing, guide, demo and planning copy in both directions. Product policy still needs to confirm the default for all visitors; arbitrary seller-written text and public SEO routes are not auto-translated. |
 
 ## Preview and verification
 
