@@ -24,7 +24,7 @@ export function GuideContent({ slug, previewOnly = false }: { slug: string; prev
       <p className="mt-4 text-muted-foreground">{language === "bn" ? "হস্তান্তরের আগে সরকারি বিআরটিএ পোর্টালে বর্তমান ফরম, কাগজপত্র ও ফি মিলিয়ে নিন।" : "Check the current forms, documents and fees together on the official BRTA portal before a transfer."}</p>
       <a href="https://bsp.brta.gov.bd/ownershipTransfer" className="mt-3 inline-block underline">{language === "bn" ? "বিআরটিএর নির্দেশনা" : "BRTA guidance"}</a>
     </section>}
-    {(slug === "sell-your-car" || slug === "dealer-sign-up") && <Link href={slug === "sell-your-car" ? "/studio?tab=sell&persona=demo-private" : "/studio?tab=dealer&persona=demo-dealer"} className="mt-8 inline-block rounded-full bg-foreground px-6 py-4 font-semibold text-background">{language === "bn" ? "ইন্টারঅ্যাকটিভ ডেমো খুলুন" : slug === "sell-your-car" ? "Try the seller demo" : "Try the dealer demo"}</Link>}
+    {(slug === "sell-your-car" || slug === "dealer-sign-up") && <Link href="/post-ad" className="mt-8 inline-block rounded-full bg-foreground px-6 py-4 font-semibold text-background">{language === "bn" ? "ইন্টারঅ্যাকটিভ ডেমো খুলুন" : slug === "sell-your-car" ? "Post a sample ad" : "Post a stock ad"}</Link>}
     <div className="mt-10 flex flex-wrap gap-3">
       <Link href="/cars" className="inline-block rounded-full border px-5 py-3">{language === "bn" ? "নমুনা গাড়ি দেখুন" : "Browse sample cars"}</Link>
       <Link href="/pricing" className="inline-block rounded-full border px-5 py-3">{language === "bn" ? "নমুনা মূল্য দেখুন" : "View sample pricing"}</Link>

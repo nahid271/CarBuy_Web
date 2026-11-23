@@ -25,7 +25,7 @@ import { Container } from "./section"
 const nav = [
   { href: "/cars", en: "Buy", bn: "গাড়ি কিনুন" },
   { href: "/studio", en: "Try demo", bn: "ডেমো দেখুন" },
-  { href: "/sell-your-car", en: "Sell", bn: "গাড়ি বিক্রি" },
+  { href: "/post-ad", en: "Sell", bn: "গাড়ি বিক্রি" },
   { href: "/dealer-sign-up", en: "Dealers", bn: "ডিলার" },
   { href: "/pricing", en: "Pricing", bn: "মূল্য" },
   { href: "/safety", en: "Safety", bn: "নিরাপত্তা" },
@@ -84,7 +84,7 @@ export function SiteHeader() {
           <LanguageToggle />
           <ThemeToggle />
           <Link
-            href="/sell-your-car"
+            href="/post-ad"
             prefetch={false}
             className={cn(buttonVariants(), "hidden h-9 rounded-full px-4 sm:inline-flex")}
           >
@@ -127,7 +127,7 @@ export function SiteHeader() {
               </nav>
               <SheetFooter className="gap-3 px-6 pb-8">
                 <Link
-                  href="/sell-your-car"
+                  href="/post-ad"
                   prefetch={false}
                   onClick={() => setMenuOpen(false)}
                   className={cn(buttonVariants(), "h-12 rounded-full text-base")}

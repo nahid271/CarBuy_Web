@@ -4,14 +4,32 @@
  * Never use this state or its localStorage persistence for real customer data.
  */
 export type DemoRole = "buyer" | "private_seller" | "dealer" | "moderator"
-export type DemoStatus = "draft" | "pending" | "live" | "rejected" | "sold"
-export type DemoCondition = "Used" | "Reconditioned"
+export type DemoStatus = "draft" | "pending" | "live" | "rejected" | "sold" | "closed"
+export type DemoCondition = "Used" | "Reconditioned" | "Brand new"
+export type DemoSellerCategory = "private" | "reconditioned_dealer" | "used_car_dealer" | "brand_new_dealer"
+export type DemoSoldVia = "carbuy" | "elsewhere" | "showroom_trade_in" | "didnt_sell"
+export const demoStorageKey = "carbuy.interactive-demo.v1"
+export const demoAdDraftKey = "carbuy.post-ad-draft.v1"
+export const demoSellerCategories: { id: DemoSellerCategory; label: string; detail: string }[] = [
+  { id: "private", label: "Private seller", detail: "I own this car and am selling it myself." },
+  { id: "reconditioned_dealer", label: "Reconditioned dealer", detail: "Our showroom lists unregistered imported cars." },
+  { id: "used_car_dealer", label: "Used car dealer", detail: "Our showroom lists cars already registered in Bangladesh." },
+  { id: "brand_new_dealer", label: "Brand new car dealer", detail: "Our showroom lists new, unregistered cars with warranty details." },
+]
 export type DemoAccount = { id: string; role: DemoRole; name: string }
 export type DemoListing = {
   id: string; sellerId: string; sellerName: string; sellerType: "private" | "dealer"
+  sellerCategory?: DemoSellerCategory; seedSample?: boolean
   title: string; make: string; model: string; year: number; condition: DemoCondition
   priceBdt: number; mileageKm: number; city: string; area: string; description: string
   photos: string[]; papersDeclared: boolean; status: DemoStatus; sampleCheck: boolean
+  grade?: string; engineCc?: number; fuel?: string; transmission?: string; body?: string; chassisNumber?: string
+  registrationYear?: number; registrationNumber?: string; colour?: string; taxTokenExpiry?: string
+  fitnessExpiry?: string; auctionGrade?: string; auctionSheetPhoto?: string; owners?: number
+  features?: string[]; negotiable?: boolean; stockNumber?: string; stockStatus?: "ready" | "preorder"
+  expectedArrival?: string; afterSalesNotes?: string; showroomName?: string; warrantyNotes?: string
+  soldVia?: DemoSoldVia; publishedAt?: string; expiresAt?: string
+  priceHistory?: { priceBdt: number; at: string }[]
   createdAt: string; updatedAt: string; moderatorNote?: string; creditUsed?: boolean
 }
 export type DemoMessage = { id: string; fromId: string; text: string; at: string }
@@ -24,7 +42,13 @@ export type DemoState = {
   conversations: DemoConversation[]; reports: DemoReport[]; alerts: DemoAlert[]
   saved: Record<string, string[]>; savedSearches: DemoSavedSearch[]; dealerCredits: Record<string, number>
 }
-export type NewDemoListing = Pick<DemoListing, "make" | "model" | "year" | "condition" | "priceBdt" | "mileageKm" | "city" | "area" | "description" | "photos" | "papersDeclared">
+export type NewDemoListing = Pick<DemoListing,
+  "make" | "model" | "year" | "condition" | "priceBdt" | "mileageKm" | "city" | "area" |
+  "description" | "photos" | "papersDeclared"> &
+  Required<Pick<DemoListing, "sellerCategory" | "grade" | "engineCc" | "fuel" | "transmission" | "body" | "chassisNumber" | "negotiable">> &
+  Pick<DemoListing, "registrationYear" | "registrationNumber" | "colour" | "taxTokenExpiry" | "fitnessExpiry" |
+    "auctionGrade" | "auctionSheetPhoto" | "owners" | "features" | "stockNumber" | "stockStatus" |
+    "expectedArrival" | "afterSalesNotes" | "showroomName" | "warrantyNotes">
 export type DemoFilters = { query?: string; make?: string; city?: string; condition?: DemoCondition; maxPriceBdt?: number }
 
 export const demoAccounts: DemoAccount[] = [
@@ -67,6 +91,7 @@ export function initialDemoState(seedCars: SeedCar[], now = new Date()): DemoSta
       year: car.year, condition: car.condition, priceBdt: car.priceBdt, mileageKm: car.mileageKm,
       city: car.city, area: car.area, description: "Sample vehicle for the interactive CarBuy preview. Inspect a real car and its original documents before paying anyone.",
       photos: [car.photo.src], papersDeclared: false, status: "live", sampleCheck: car.verified,
+      seedSample: true,
       createdAt: at, updatedAt: at,
     })),
     conversations: [], reports: [], alerts: [], saved: {}, savedSearches: [], dealerCredits: { "demo-dealer": 10 },
@@ -94,28 +119,91 @@ export function searchDemoListings(state: DemoState, filters: DemoFilters = {}):
 }
 
 function validateNewListing(input: NewDemoListing, now: Date) {
+  const category = input.sellerCategory
+  ensure(demoSellerCategories.some(item => item.id === category), "Choose who is posting this ad")
+  ensure(category === "private" || category === "used_car_dealer" || category === "reconditioned_dealer" || category === "brand_new_dealer", "Invalid seller category")
   ensure(input.make.trim().length >= 2 && input.make.length <= 40, "Choose a valid make")
   ensure(input.model.trim().length >= 1 && input.model.length <= 50, "Choose a valid model")
   ensure(Number.isInteger(input.year) && input.year >= 1980 && input.year <= now.getFullYear() + 1, "Invalid model year")
-  ensure(input.condition === "Used" || input.condition === "Reconditioned", "Invalid condition")
+  ensure(input.condition === "Used" || input.condition === "Reconditioned" || input.condition === "Brand new", "Invalid condition")
+  ensure(category !== "used_car_dealer" || input.condition === "Used", "Used car dealers must list a used car")
+  ensure(category !== "reconditioned_dealer" || input.condition === "Reconditioned", "Reconditioned dealers must list an unregistered reconditioned car")
+  ensure(category !== "brand_new_dealer" || input.condition === "Brand new", "Brand new dealers must list a new car")
+  ensure(category !== "private" || input.condition !== "Brand new", "Brand new ads require a dealer account")
+  ensure(input.grade?.trim().length >= 1 && input.grade.length <= 50, "Enter a grade or choose Not listed")
+  ensure(Number.isInteger(input.engineCc) && input.engineCc >= 1 && input.engineCc <= 20_000, "Invalid engine cc")
+  ensure(["Petrol", "Hybrid", "Plug-in hybrid", "Diesel", "CNG", "LPG", "Electric"].includes(input.fuel), "Choose a valid fuel")
+  ensure(["Automatic", "CVT", "Manual", "DCT"].includes(input.transmission), "Choose a valid transmission")
+  ensure(["Sedan", "SUV", "Crossover", "Hatchback", "Microbus", "Wagon", "Pickup", "Coupe", "Other"].includes(input.body), "Choose a valid body type")
+  ensure(/^[A-HJ-NPR-Z0-9-]{8,25}$/i.test(input.chassisNumber?.trim() || ""), "Enter a valid sample chassis number or VIN")
   ensure(Number.isInteger(input.priceBdt) && input.priceBdt >= 100_000 && input.priceBdt <= 100_000_000, "Invalid asking price")
   ensure(Number.isInteger(input.mileageKm) && input.mileageKm >= 0 && input.mileageKm <= 1_000_000, "Invalid mileage")
   ensure(input.city.trim().length >= 2 && input.city.length <= 60 && input.area.length <= 60, "Invalid location")
   ensure(input.description.trim().length >= 30 && input.description.length <= 2_000, "Add a useful description of at least 30 characters")
+  ensure(input.papersDeclared === true, "Confirm the vehicle details and original papers declaration")
   ensure(!/(?:https?:\/\/|www\.|\+?880\s*1\d{9}|01\d{9})/i.test(input.description), "Keep phone numbers and links out of the description")
-  ensure(Array.isArray(input.photos) && input.photos.length <= 3 && input.photos.every(photo => /^data:image\/(jpeg|png|webp);base64,[a-zA-Z0-9+/=]+$/.test(photo) && photo.length <= 650_000), "Use up to three small JPG, PNG or WebP photos")
+  ensure(input.condition !== "Used" || Number.isInteger(input.registrationYear) && input.registrationYear! >= input.year && input.registrationYear! <= now.getFullYear() + 1, "Used cars need a valid Bangladesh registration year")
+  ensure(input.condition === "Used" || input.registrationYear === undefined, "Unregistered cars must not have a registration year")
+  ensure(input.condition !== "Brand new" || input.mileageKm <= 1_000, "Brand new cars need low delivery mileage")
+  if (input.registrationNumber) ensure(input.registrationNumber.length <= 40, "Registration number is too long")
+  if (input.owners !== undefined) ensure(Number.isInteger(input.owners) && input.owners >= 1 && input.owners <= 20, "Invalid owner count")
+  for (const date of [input.taxTokenExpiry, input.fitnessExpiry, input.expectedArrival]) {
+    if (date) ensure(/^\d{4}-\d{2}-\d{2}$/.test(date) && !Number.isNaN(Date.parse(date)), "Use valid dates")
+  }
+  if (category !== "private") {
+    ensure((input.showroomName || "").trim().length >= 2, "Enter the showroom name")
+    ensure(/^[A-Za-z0-9_-]{1,32}$/.test(input.stockNumber || ""), "Enter a unique stock number")
+    ensure(input.stockStatus === "ready" || input.stockStatus === "preorder", "Choose Ready or Pre-order stock")
+    ensure(input.stockStatus !== "preorder" || Boolean(input.expectedArrival), "Pre-order needs an expected arrival date")
+    if (category === "brand_new_dealer") ensure((input.warrantyNotes || "").trim().length >= 10, "Add warranty terms for a brand new car")
+  }
+  const limit = category === "private" ? 20 : 30
+  ensure(Array.isArray(input.photos) && input.photos.length >= 4 && input.photos.length <= limit, `Add 4–${limit} photos for this seller type`)
+  ensure(input.photos.every(photo => /^data:image\/webp;base64,[a-zA-Z0-9+/=]+$/.test(photo) && photo.length <= 145_000) &&
+    input.photos.reduce((sum, photo) => sum + photo.length, 0) <= 3_800_000, "Use small WebP photos with metadata removed")
+  ensure(new Set(input.photos).size === input.photos.length, "Remove duplicate photos")
+  if (input.auctionSheetPhoto) ensure(/^data:image\/webp;base64,[a-zA-Z0-9+/=]+$/.test(input.auctionSheetPhoto) &&
+    input.auctionSheetPhoto.length <= 145_000, "Use a small auction sheet image")
 }
 
 export function createDemoDraft(state: DemoState, accountId: string, input: NewDemoListing, now = new Date()): DemoState {
   const account = actor(state, accountId)
   ensure(account.role === "private_seller" || account.role === "dealer", "Switch to a seller or dealer persona")
   validateNewListing(input, now)
-  ensure(state.listings.filter(item => item.sellerId === accountId && item.status !== "sold").length < 50, "Demo listing limit reached")
+  ensure((input.sellerCategory === "private") === (account.role === "private_seller"), "Seller category must match the posting account")
+  ensure(state.listings.filter(item => item.sellerId === accountId && !item.seedSample && item.status !== "sold" && item.status !== "closed").length < 50, "Demo listing limit reached")
+  ensure(!state.listings.some(item => !item.seedSample && item.status !== "sold" && item.status !== "closed" &&
+    item.chassisNumber?.toUpperCase() === input.chassisNumber.toUpperCase()), "This chassis already has a demo ad")
+  if (account.role === "dealer") ensure(!state.listings.some(item => item.sellerId === accountId &&
+    item.stockNumber?.toLowerCase() === input.stockNumber?.toLowerCase()), "This showroom stock number is already used")
   const copy = clone(state), at = now.toISOString()
-  copy.listings.unshift({ ...input, id: next(copy, "listing"), sellerId: accountId, sellerName: account.name,
+  copy.listings.unshift({ ...input, id: next(copy, "listing"), sellerId: accountId, sellerName: input.showroomName?.trim() || account.name,
     sellerType: account.role === "dealer" ? "dealer" : "private", title: `${input.year} ${input.make.trim()} ${input.model.trim()}`,
     make: input.make.trim(), model: input.model.trim(), city: input.city.trim(), area: input.area.trim(),
-    description: input.description.trim(), status: "draft", sampleCheck: false, createdAt: at, updatedAt: at })
+    description: input.description.trim(), chassisNumber: input.chassisNumber.trim().toUpperCase(),
+    status: "draft", sampleCheck: false, seedSample: false, priceHistory: [{ priceBdt: input.priceBdt, at }],
+    createdAt: at, updatedAt: at })
+  return copy
+}
+
+export function reviseDemoDraft(state: DemoState, accountId: string, listingId: string, input: NewDemoListing, now = new Date()): DemoState {
+  const account = actor(state, accountId)
+  const current = listing(state, listingId)
+  ensure(current.sellerId === accountId && (current.status === "draft" || current.status === "rejected"), "Only your draft or returned ad can be edited")
+  validateNewListing(input, now)
+  ensure((input.sellerCategory === "private") === (account.role === "private_seller"), "Seller category must match the posting account")
+  ensure(!state.listings.some(item => item.id !== listingId && !item.seedSample && item.status !== "sold" && item.status !== "closed" &&
+    item.chassisNumber?.toUpperCase() === input.chassisNumber.toUpperCase()), "This chassis already has a demo ad")
+  if (account.role === "dealer") ensure(!state.listings.some(item => item.id !== listingId && item.sellerId === accountId &&
+    item.stockNumber?.toLowerCase() === input.stockNumber?.toLowerCase()), "This showroom stock number is already used")
+  const copy = clone(state), item = listing(copy, listingId), at = now.toISOString()
+  Object.assign(item, input, { sellerName: input.showroomName?.trim() || account.name,
+    title: `${input.year} ${input.make.trim()} ${input.model.trim()}`,
+    make: input.make.trim(), model: input.model.trim(), city: input.city.trim(), area: input.area.trim(),
+    description: input.description.trim(), chassisNumber: input.chassisNumber.trim().toUpperCase(),
+    status: "draft", moderatorNote: undefined, updatedAt: at })
+  if (item.priceHistory?.at(-1)?.priceBdt !== input.priceBdt)
+    item.priceHistory = [...(item.priceHistory || []), { priceBdt: input.priceBdt, at }]
   return copy
 }
 
@@ -123,7 +211,11 @@ export function submitDemoListing(state: DemoState, accountId: string, listingId
   actor(state, accountId)
   const copy = clone(state), item = listing(copy, listingId)
   ensure(item.sellerId === accountId && (item.status === "draft" || item.status === "rejected"), "Only your draft can be submitted")
-  ensure(item.photos.length > 0, "Add at least one photo before submitting")
+  validateNewListing(item as NewDemoListing, now)
+  ensure((item.sellerCategory === "private") === (item.sellerType === "private"), "Seller category must match the posting account")
+  if (item.sellerType === "private") ensure(copy.listings.filter(row => row.sellerId === accountId &&
+    !row.seedSample && row.id !== item.id && (row.status === "pending" || row.status === "live")).length < 3,
+    "Private sellers can have at most 3 active cars")
   if (item.sellerType === "dealer") {
     ensure((copy.dealerCredits[accountId] || 0) > 0, "No demo dealer credits remain")
     copy.dealerCredits[accountId] -= 1
@@ -140,6 +232,10 @@ export function moderateDemoListing(state: DemoState, moderatorId: string, listi
   ensure(item.status === "pending", "Only pending listings can be reviewed")
   if (!approve) ensure(reason.trim().length >= 5, "Give a clear rejection reason")
   item.status = approve ? "live" : "rejected"; item.moderatorNote = approve ? undefined : reason.trim(); item.updatedAt = now.toISOString()
+  if (approve) {
+    item.publishedAt = item.updatedAt
+    item.expiresAt = new Date(now.getTime() + (item.sellerType === "private" ? 60 : 30) * 86_400_000).toISOString()
+  }
   if (!approve && item.creditUsed) { copy.dealerCredits[item.sellerId] = (copy.dealerCredits[item.sellerId] || 0) + 1; item.creditUsed = false }
   alert(copy, item.sellerId, approve ? `${item.title} is live in the demo` : `${item.title} needs changes: ${reason.trim()}`, item.updatedAt)
   if (approve) for (const saved of copy.savedSearches) if (item.title.toLowerCase().includes(saved.query.toLowerCase()))
@@ -154,18 +250,20 @@ export function changeDemoPrice(state: DemoState, accountId: string, listingId: 
   ensure(Number.isInteger(priceBdt) && priceBdt >= 100_000 && priceBdt <= 100_000_000, "Invalid asking price")
   const oldPrice = item.priceBdt
   item.priceBdt = priceBdt; item.updatedAt = now.toISOString()
+  item.priceHistory = [...(item.priceHistory || []), { priceBdt, at: item.updatedAt }]
   if (priceBdt < oldPrice) for (const [buyerId, saved] of Object.entries(copy.saved)) if (saved.includes(item.id))
     alert(copy, buyerId, `${item.title} price dropped in the demo`, item.updatedAt)
   return copy
 }
 
-export function markDemoSold(state: DemoState, accountId: string, listingId: string, now = new Date()): DemoState {
+export function markDemoSold(state: DemoState, accountId: string, listingId: string, soldVia: DemoSoldVia, now = new Date()): DemoState {
   actor(state, accountId)
   const copy = clone(state), item = listing(copy, listingId)
   ensure(item.sellerId === accountId && item.status === "live", "Only your live listing can be marked sold")
-  item.status = "sold"; item.updatedAt = now.toISOString()
+  ensure(["carbuy", "elsewhere", "showroom_trade_in", "didnt_sell"].includes(soldVia), "Choose where the car sold")
+  item.status = soldVia === "didnt_sell" ? "closed" : "sold"; item.soldVia = soldVia; item.updatedAt = now.toISOString()
   for (const [buyerId, saved] of Object.entries(copy.saved)) if (saved.includes(item.id))
-    alert(copy, buyerId, `${item.title} was marked sold in the demo`, item.updatedAt)
+    alert(copy, buyerId, soldVia === "didnt_sell" ? `${item.title} was closed in the demo` : `${item.title} was marked sold in the demo`, item.updatedAt)
   return copy
 }
 

@@ -1,15 +1,15 @@
 # CarBuy interactive marketplace demo
 
-Open the [public black-themed demo](https://nahid271.github.io/CarBuy_Web/preview/studio/). It runs entirely in the visitor's browser and begins with sample Bangladesh vehicle listings. Choose a persona at the top to walk through each role. Refreshing the page keeps the local demo state; **Reset demo** restores the samples.
+Open the [public black-themed demo](https://nahid271.github.io/CarBuy_Web/preview/studio/) or [post a sample car ad](https://nahid271.github.io/CarBuy_Web/preview/post-ad/). It runs entirely in the visitor's browser and begins with sample Bangladesh vehicle listings. Choose a persona at the top to walk through each role. Refreshing the page keeps the local demo state; **Reset demo** restores the samples.
 
 | Persona | Working browser-local actions |
 | --- | --- |
 | Buyer | Search by keyword, make, city and budget; inspect details; save cars and searches; start a conversation; send messages; report a listing; see price-drop, sold and saved-search alerts. |
-| Private seller | Create a draft with vehicle details, declaration and up to three small photos; submit for review; see moderation status; change a live asking price; mark a car sold; reply to demo leads. |
-| Dealer | Create stock ads, submit them against free demo credits, see stock/lead/credit counts, update asking prices and answer leads. Rejected ads return their demo credit. |
+| Private seller | Explicitly choose private seller on every ad; enter specifications, registration when used, Bangladesh location and lakh price; upload 4–20 compressed photos; declare papers; submit for review; see moderation status, revise a returned ad, change a live asking price, close an ad with outcome, and reply to demo leads. At most three non-sample ads can be pending or live. |
+| Dealer | Explicitly choose reconditioned, used car or brand new dealer; enter showroom, unique stock number, stock readiness or arrival, after-sales information and new-car warranty where applicable; upload 4–30 photos; submit against free demo credits, see stock/lead/credit counts, update asking prices and answer leads. Rejected ads return their demo credit. |
 | Moderator | Approve or reject pending ads with a reason, review buyer reports and remove a reported car. |
 
-The ad lifecycle is **draft → pending → live/rejected → sold**. New ads appear to buyers only after demo approval. The shared state engine is in `shared/demo-marketplace.ts`; both `preview-app/` and `marketplace/` use it. Lifecycle and validation checks are in `platform/test/demo-marketplace.test.ts`.
+The ad lifecycle is **draft → pending → live/rejected → sold/closed**. The guided form autosaves locally, lets a seller reorder photos, strips image metadata through browser canvas, and offers an editable description template. The price helper converts lakh to BDT and shows sample comparable prices only when five matching ads exist. New ads appear to buyers only after demo approval. The shared state engine is in `shared/demo-marketplace.ts`; both `preview-app/` and `marketplace/` use it. Lifecycle and validation checks are in `platform/test/demo-marketplace.test.ts`.
 
 ## Scope and release boundary
 
